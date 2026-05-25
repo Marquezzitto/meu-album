@@ -1,0 +1,508 @@
+/* ==========================================================================
+   VARIÁVEIS DE CORES E ESTILO (Design Moderno & Clean)
+   ========================================================================== */
+   :root {
+    --bg-principal: #0f172a;
+    --bg-card: #1e293b;
+    --bg-card-hover: #334155;
+    --texto-principal: #f8fafc;
+    --texto-secundario: #94a3b8;
+    --cor-primaria: #3b82f6;
+    --cor-primaria-hover: #2563eb;
+    --cor-sucesso: #10b981;
+    --cor-sucesso-bg: rgba(16, 185, 129, 0.15);
+    --cor-perigo: #ef4444;
+    --borda: rgba(255, 255, 255, 0.06);
+    --sombra: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    --sombra-suave: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --fonte: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    font-family: var(--fonte);
+    background-color: var(--bg-principal);
+    color: var(--texto-principal);
+    line-height: 1.5;
+    padding-bottom: 40px;
+  }
+  
+  /* ==========================================================================
+     TELA DE LOGIN
+     ========================================================================== */
+  #tela-login {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+    background: radial-gradient(circle at top, #1e3a8a 0%, var(--bg-principal) 70%);
+  }
+  
+  .login-box {
+    background-color: var(--bg-card);
+    padding: 40px 30px;
+    border-radius: 24px;
+    box-shadow: var(--sombra);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+    border: 1px solid var(--borda);
+  }
+  
+  .login-box i.logo-icon {
+    font-size: 4rem;
+    color: var(--cor-primaria);
+    margin-bottom: 20px;
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  .login-box h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    letter-spacing: -0.5px;
+  }
+  
+  .login-box p {
+    color: var(--texto-secundario);
+    margin-bottom: 30px;
+    font-size: 0.95rem;
+  }
+  
+  /* ==========================================================================
+     BOTÕES GERAIS
+     ========================================================================== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 28px;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    width: 100%;
+  }
+  
+  .btn-primary {
+    background-color: var(--cor-primaria);
+    color: white;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+  }
+  
+  .btn-primary:hover {
+    background-color: var(--cor-primaria-hover);
+    transform: translateY(-2px);
+  }
+  
+  .btn-primary:active { transform: translateY(0); }
+  
+  .btn-logout {
+    background-color: transparent;
+    color: var(--texto-secundario);
+    border: 1px solid var(--borda);
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    border-radius: 10px;
+    width: auto;
+  }
+  
+  .btn-logout:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--cor-perigo);
+    border-color: rgba(239, 68, 68, 0.2);
+  }
+  
+  /* ==========================================================================
+     HEADER & PAINEL DE STATUS (DASHBOARD)
+     ========================================================================== */
+  header {
+    background-color: var(--bg-card);
+    border-bottom: 1px solid var(--borda);
+    padding: 16px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  
+  .header-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+  }
+  
+  .user-info i {
+    color: var(--cor-primaria);
+    background: rgba(59, 130, 246, 0.1);
+    padding: 8px;
+    border-radius: 50%;
+  }
+  
+  .main-container {
+    max-width: 1200px;
+    margin: 24px auto;
+    padding: 0 20px;
+  }
+  
+  /* Dashboard de Progresso */
+  .dashboard-progresso {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-radius: 20px;
+    padding: 24px;
+    border: 1px solid var(--borda);
+    box-shadow: var(--sombra-suave);
+    margin-bottom: 30px;
+  }
+  
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  
+  .dashboard-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .dashboard-header h2 i { color: #eab308; } /* Cor de Ouro/Troféu */
+  
+  /* Barra de Progresso */
+  .progress-bar-container {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    height: 12px;
+    width: 100%;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  
+  .progress-bar-fill {
+    background: linear-gradient(90deg, var(--cor-primaria) 0%, var(--cor-sucesso) 100%);
+    height: 100%;
+    width: 0%;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 999px;
+  }
+  
+  .cards-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1xl);
+    gap: 16px;
+  }
+  
+  @media (min-width: 600px) {
+    .cards-stats { grid-template-columns: repeat(3, 1fr); }
+  }
+  
+  .stat-card {
+    background-color: rgba(255, 255, 255, 0.03);
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid var(--borda);
+    text-align: center;
+  }
+  
+  .stat-card .label {
+    font-size: 0.85rem;
+    color: var(--texto-secundario);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  
+  .stat-card .value {
+    font-size: 1.6rem;
+    font-weight: 700;
+  }
+  
+  .stat-card.total .value { color: var(--texto-principal); }
+  .stat-card.tenho .value { color: var(--cor-sucesso); }
+  .stat-card.faltam .value { color: var(--cor-perigo); }
+  
+  /* ==========================================================================
+     GRID DE PAÍSES
+     ========================================================================== */
+  .grid-paises {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  @media (min-width: 768px) {
+    .grid-paises { grid-template-columns: repeat(2, 1fr); }
+  }
+  
+  @media (min-width: 1024px) {
+    .grid-paises { grid-template-columns: repeat(3, 1fr); }
+  }
+  
+  .pais-card {
+    background-color: var(--bg-card);
+    border-radius: 18px;
+    border: 1px solid var(--borda);
+    padding: 16px;
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .pais-card:hover {
+    transform: translateY(-2px);
+    background-color: var(--bg-card-hover);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+  
+  .pais-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .pais-nome-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .bandeira {
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+  
+  .pais-nome {
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+  
+  .pais-badge {
+    background-color: rgba(255, 255, 255, 0.08);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--texto-secundario);
+    transition: all 0.3s ease;
+  }
+  
+  /* Quando o país está completo (20/20) */
+  .pais-card.completo {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: linear-gradient(145deg, var(--bg-card) 0%, rgba(16, 185, 129, 0.05) 100%);
+  }
+  
+  .pais-card.completo .pais-badge {
+    background-color: var(--cor-sucesso);
+    color: white;
+  }
+  
+  /* Mini barra de progresso por país */
+  .mini-progress-bg {
+    background-color: rgba(255, 255, 255, 0.05);
+    height: 4px;
+    width: 100%;
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  
+  .mini-progress-bar {
+    background-color: var(--cor-primaria);
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease, background-color 0.3s ease;
+  }
+  
+  .pais-card.completo .mini-progress-bar {
+    background-color: var(--cor-sucesso);
+  }
+  
+  /* ==========================================================================
+     MODAL DE FIGURINHAS (Ajustado perfeitamente para Dedos no Celular)
+     ========================================================================== */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    align-items: flex-end; /* Abre de baixo para cima no celular estilo App moderno */
+    justify-content: center;
+  }
+  
+  @media (min-width: 500px) {
+    .modal { align-items: center; }
+  }
+  
+  .modal-content {
+    background-color: var(--bg-card);
+    width: 100%;
+    max-width: 500px;
+    border-radius: 24px 24px 0 0; /* Canto arredondado em cima no mobile */
+    border: 1px solid var(--borda);
+    box-shadow: var(--sombra);
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  @media (min-width: 500px) {
+    .modal-content {
+      border-radius: 24px;
+      max-height: 85vh;
+    }
+  }
+  
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--borda);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .modal-titulo-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+  
+  .close-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    color: var(--texto-principal);
+    font-size: 1.2rem;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+  
+  .close-btn:hover { background: rgba(255, 255, 255, 0.1); }
+  
+  .modal-body {
+    padding: 24px;
+    overflow-y: auto;
+  }
+  
+  /* Grid de Figurinhas 1 a 20 */
+  .grid-figurinhas {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  
+  /* Botões das Figurinhas (Perfeitos para clicar com o polegar) */
+  .figurinha-btn {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--borda);
+    color: var(--texto-secundario);
+    aspect-ratio: 1; /* Garante que o botão seja perfeitamente quadrado */
+    border-radius: 14px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .figurinha-btn:hover {
+    border-color: var(--texto-secundario);
+    color: var(--texto-principal);
+  }
+  
+  /* Estado Ativo: Quando você já TEM a figurinha */
+  .figurinha-btn.marcado {
+    background-color: var(--cor-sucesso);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    transform: scale(0.95);
+  }
+  /* ==========================================================================
+   FORÇAR DESIGN PREMIUM NOS BOTÕES DO MODAL
+   ========================================================================== */
+#grid-figurinhas button {
+  background: #334155 !important; /* Cinza grafite moderno */
+  color: #f8fafc !important;
+  border: 2px solid #475569 !important;
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  padding: 12px 0 !important;
+  border-radius: 12px !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
+  display: inline-block !important;
+  width: 100% !important;
+  text-align: center !important;
+}
+
+/* Efeito Hover (Ao passar o mouse ou segurar o dedo no celular) */
+#grid-figurinhas button:hover {
+  background: #475569 !important;
+  border-color: #94a3b8 !important;
+  transform: translateY(-2px) !important; /* Leve salto */
+  box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Quando o botão receber o clique (Estado Marcado) */
+#grid-figurinhas button.marcado {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; /* Verde vibrante */
+  color: white !important;
+  border-color: #34d399 !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4) !important;
+}
