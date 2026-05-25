@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, onSnapshot, setDoc } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, setDoc, collection, getDocs } from "firebase/firestore";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
 
 // ==========================================
@@ -82,11 +82,17 @@ export default function App() {
   const [telaAtual, setTelaAtual] = useState('lista'); 
   const [paisAberto, setPaisAberto] = useState(null);
   const [meuAlbum, setMeuAlbum] = useState({});
+  const [albunsAlheios, setAlbunsAlheios] = useState([]);
+  const [notificacoes, setNotificacoes] = useState([]);
 
   useEffect(() => {
     const desligarMonitor = onAuthStateChanged(auth, (loggedUser) => {
       setUser(loggedUser);
-      if (!loggedUser) setMeuAlbum({});
+      if (!loggedUser) {
+        setMeuAlbum({});
+        setAlbunsAlheios([]);
+        setNotificacoes([]);
+      }
     });
     return () => desligarMonitor();
   }, []);
@@ -99,6 +105,36 @@ export default function App() {
     });
     return () => escutarBanco();
   }, [user]);
+
+  // Monitorar notificações e interesse de amigos em tempo real
+  useEffect(() => {
+    if (!user) return;
+    const docNotif = doc(db, "notificacoes_trocas", user.uid);
+    const escutarNotif = onSnapshot(docNotif, (snapshot) => {
+      if (snapshot.exists()) {
+        const dados = snapshot.data();
+        setNotificacoes(dados.pedidos || []);
+      }
+    });
+    return () => escutarNotif();
+  }, [user]);
+
+  // Buscar álbuns compartilhados no app por outros usuários
+  const carregarAlbunsDoApp = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "compartilhamentos_publicos"));
+      const lista = [];
+      querySnapshot.forEach((doc) => {
+        if (doc.id !== user?.uid) {
+          lista.push({ uid: doc.id, ...doc.data() });
+        }
+      });
+      setAlbunsAlheios(lista);
+      setTelaAtual('comunidade');
+    } catch (e) {
+      console.error("Erro ao carregar comunidade: ", e);
+    }
+  };
 
   const totalFigurinhasNoAlbum = listaPaises.length * 20;
   
@@ -131,17 +167,39 @@ export default function App() {
     return { tenho, faltam: 20 - tenho, repetidas };
   };
 
-  const clicarNoNumero = async (paisId, numero) => {
+  // Função auxiliar para gerar a lista estruturada de repetidas
+  const obterDadosRepetidas = (albumData = meuAlbum) => {
+    return listaPaises.map(pais => {
+      const itemsDoPais = [];
+      for (let num = 1; num <= 20; num++) {
+        const qtd = Number(albumData[`${pais.id}-${num}-rep`]) || 0;
+        if (qtd > 0) itemsDoPais.push({ num, qtd });
+      }
+      return { ...pais, itens: itemsDoPais };
+    }).filter(pais => pais.itens.length > 0);
+  };
+
+  // Sincroniza dados no banco pessoal e no espelho público de trocas
+  const salvarNoBancoCompleto = async (novoAlbum) => {
     if (!user) return;
+    await setDoc(doc(db, "usuarios_figurinhas", user.uid), novoAlbum);
+    
+    // Salva também na aba pública para os amigos poderem ver dentro do app
+    await setDoc(doc(db, "compartilhamentos_publicos", user.uid), {
+      nomeDono: user.displayName || "Amigo Anônimo",
+      album: novoAlbum,
+      atualizadoEm: new Date().toISOString()
+    });
+  };
+
+  const clicarNoNumero = async (paisId, numero) => {
     const UrbanKey = `${paisId}-${numero}`;
     const novoEstado = !meuAlbum[UrbanKey];
     const albumAtualizado = { ...meuAlbum, [UrbanKey]: novoEstado };
-    
-    await setDoc(doc(db, "usuarios_figurinhas", user.uid), albumAtualizado);
+    await salvarNoBancoCompleto(albumAtualizado);
   };
 
   const alterarRepetida = async (paisId, numero, operacao) => {
-    if (!user) return;
     const apiKey = `${paisId}-${numero}-rep`;
     const qtdAtual = Number(meuAlbum[apiKey]) || 0;
     
@@ -149,7 +207,46 @@ export default function App() {
     if (novaQtd < 0) novaQtd = 0;
 
     const albumAtualizado = { ...meuAlbum, [apiKey]: novaQtd };
-    await setDoc(doc(db, "usuarios_figurinhas", user.uid), albumAtualizado);
+    await salvarNoBancoCompleto(albumAtualizado);
+  };
+
+  // ENVIAR SINALIZAÇÃO / INTERESSE DENTRO DO APP
+  const sinalizarInteresse = async (donoUid, donoNome, itemPais, itemNum) => {
+    try {
+      const docRef = doc(db, "notificacoes_trocas", donoUid);
+      // Criamos um alerta simples que vai aparecer direto na tela do seu amigo
+      const novoPedido = {
+        quemQuer: user.displayName || "Um amigo",
+        item: `${itemPais} ${itemNum}`,
+        data: new Date().toLocaleDateString('pt-BR')
+      };
+      
+      alert(`Sinalizado! Avisamos o ${donoNome} que você quer a figurinha ${itemPais} ${itemNum}!`);
+      
+      // Armazena a sinalização no documento do amigo no Firebase
+      await setDoc(docRef, { pedidos: [novoPedido] }, { merge: true });
+    } catch(e) {
+      console.error(e);
+    }
+  };
+
+  // GERAR LINK COMPARTILHAMENTO WHATSAPP
+  const compartilharWhatsApp = () => {
+    const repetidas = obterDadosRepetidas();
+    if (repetidas.length === 0) {
+      alert("Você não tem figurinhas repetidas marcadas para compartilhar!");
+      return;
+    }
+
+    let texto = `👋 Fala galera! Aqui estão minhas figurinhas REPETIDAS do Álbum da Copa 2026:\n\n`;
+    repetidas.forEach(pais => {
+      const listaNums = pais.itens.map(i => `${i.num}(${i.qtd}x)`).join(', ');
+      texto += `📌 *${pais.nome.replace(' - ', '')}* [${pais.id}]: ${listaNums}\n`;
+    });
+    texto += `\nQuem precisar de alguma me avisa aqui!`;
+
+    const urlWhats = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+    window.open(urlWhats, '_blank');
   };
 
   // --- TELA DE LOGIN ---
@@ -189,6 +286,19 @@ export default function App() {
         </header>
 
         <div className="main-container" style={{ maxWidth: '1200px' }}>
+          
+          {/* PAINEL DE SINALIZAÇÕES RECEBIDAS */}
+          {notificacoes.length > 0 && (
+            <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '2px solid #10b981', borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
+              <h4 style={{ color: '#10b981', margin: 0, fontSize: '0.95rem', fontWeight: 'bold' }}>📢 Tem alguém interessado nas suas repetidas!</h4>
+              {notificacoes.map((n, idx) => (
+                <p key={idx} style={{ margin: '6px 0 0 0', fontSize: '0.85rem', opacity: 0.9 }}>
+                  • <b>{n.quemQuer}</b> sinalizou interesse na sua figurinha <b>{n.item}</b> em {n.data}.
+                </p>
+              ))}
+            </div>
+          )}
+
           {/* Dashboard de Progresso */}
           <div className="dashboard-progresso">
             <div className="dashboard-header">
@@ -213,13 +323,24 @@ export default function App() {
             </div>
           </div>
 
-          <button 
-            onClick={() => setTelaAtual('repetidas')}
-            className="btn btn-primary" 
-            style={{ width: '100%', marginBottom: '24px', background: '#3b82f6', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '14px', borderRadius: '12px', fontSize: '1rem', fontWeight: '700' }}
-          >
-            <span>🔄 Ver Minhas Repetidas ({totalRepetidasGeral})</span>
-          </button>
+          {/* DOIS BOTÕES DE CONTROLE DE TROCAS */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+            <button 
+              onClick={() => setTelaAtual('repetidas')}
+              className="btn btn-primary" 
+              style={{ background: '#3b82f6', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '14px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '700' }}
+            >
+              <span>🔄 Minhas Repetidas ({totalRepetidasGeral})</span>
+            </button>
+
+            <button 
+              onClick={carregarAlbunsDoApp}
+              className="btn btn-primary" 
+              style={{ background: '#8b5cf6', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '14px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '700' }}
+            >
+              <span>👥 Ver Trocas do App</span>
+            </button>
+          </div>
 
           <h2 className="text-gray-400 font-bold text-xs tracking-wider mb-4 uppercase">Seleções (Toque para abrir)</h2>
           
@@ -236,8 +357,6 @@ export default function App() {
                   style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '90px' }}
                 >
                   <div className="pais-info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
-                    
-                    {/* Bloco da Esquerda: Bandeira + Nome + Sigla */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: '1', minWidth: '0' }}>
                       <img 
                         src={`https://flagcdn.com/w40/${pais.code}.png`} 
@@ -254,7 +373,6 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Bloco da Direita: Contador fixo */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: '0', minWidth: '55px' }}>
                       <span className="pais-badge" style={{ whiteSpace: 'nowrap' }}>{tenho} / 20</span>
                       {repetidas > 0 ? (
@@ -263,7 +381,6 @@ export default function App() {
                         <span style={{ fontSize: '10px', opacity: '0', marginTop: '2px' }}>-</span>
                       )}
                     </div>
-
                   </div>
                   
                   <div className="mini-progress-bg" style={{ marginTop: 'auto' }}>
@@ -295,7 +412,7 @@ export default function App() {
 
         <div className="main-container" style={{ maxWidth: '500px' }}>
           <div className="pais-card completo" style={{ cursor: 'default', marginBottom: '24px', padding: '20px' }}>
-            <div className="flex items-center gap-4" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <img 
                 src={`https://flagcdn.com/w80/${paisAberto.code}.png`} 
                 alt={`Bandeira de ${paisAberto.nome}`}
@@ -368,16 +485,7 @@ export default function App() {
 
   // --- TELA 3: PÁGINA EXCLUSIVA SÓ PARA REPETIDAS ---
   if (telaAtual === 'repetidas') {
-    const listaRepetidasAgrupadas = listaPaises.map(pais => {
-      const itemsDoPais = [];
-      for (let num = 1; num <= 20; num++) {
-        const qtd = Number(meuAlbum[`${pais.id}-${num}-rep`]) || 0;
-        if (qtd > 0) {
-          itemsDoPais.push({ num, qtd });
-        }
-      }
-      return { ...pais, itens: itemsDoPais };
-    }).filter(pais => pais.itens.length > 0);
+    const listaRepetidasAgrupadas = obterDadosRepetidas();
 
     return (
       <div>
@@ -390,12 +498,21 @@ export default function App() {
         </header>
 
         <div className="main-container" style={{ maxWidth: '500px' }}>
-          <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', borderRadius: '16px', padding: '20px', marginBottom: '24px', textAlign: 'center' }}>
+          <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', borderRadius: '16px', padding: '20px', marginBottom: '16px', textAlign: 'center' }}>
             <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#3b82f6' }}>🔄 Banco de Repetidas</h2>
             <p style={{ fontSize: '0.85rem', opacity: '0.7', marginTop: '4px' }}>Aqui você vê todas as figurinhas que tem sobrando para trocar!</p>
             <div style={{ fontSize: '2.2rem', fontWeight: '900', marginTop: '10px', color: '#fff' }}>{totalRepetidasGeral}</div>
             <span style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: '#3b82f6' }}>Total de Figurinhas</span>
           </div>
+
+          {/* BOTÃO COMPARTILHAR NO WHATSAPP */}
+          <button 
+            onClick={compartilharWhatsApp}
+            className="btn"
+            style={{ width: '100%', marginBottom: '24px', background: '#25D366', color: '#fff', padding: '14px', borderRadius: '12px', fontSize: '1rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', border: 'none', cursor: 'pointer' }}
+          >
+            <i className="fa-brands fa-whatsapp" style={{ fontSize: '1.3rem' }}></i> Compartilhar no WhatsApp
+          </button>
 
           <h3 className="text-gray-400 font-bold text-xs tracking-wider mb-4 uppercase">Minhas Sobras por País:</h3>
 
@@ -434,6 +551,61 @@ export default function App() {
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // --- TELA 4: VER COMPARTILHAMENTO DE OUTRAS PESSOAS NO APP ---
+  if (telaAtual === 'comunidade') {
+    return (
+      <div>
+        <header>
+          <div className="header-container">
+            <button onClick={() => setTelaAtual('lista')} className="btn-logout" style={{ borderColor: 'var(--cor-primaria)', color: 'var(--cor-primaria)' }}>
+              <i className="fa-solid fa-arrow-left"></i> Voltar para o Álbum
+            </button>
+          </div>
+        </header>
+
+        <div className="main-container" style={{ maxWidth: '600px' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '4px' }}>👥 Repetidas da Comunidade</h2>
+          <p style={{ fontSize: '0.85rem', opacity: '0.6', marginBottom: '20px' }}>Toque no botão azul ao lado da figurinha de um amigo para sinalizar interesse!</p>
+
+          {albunsAlheios.length === 0 ? (
+            <p style={{ opacity: 0.5, textAlign: 'center', marginTop: '20px' }}>Nenhum outro amigo compartilhou figurinhas no app ainda.</p>
+          ) : (
+            albunsAlheios.map((amigo) => {
+              const repDoAmigo = obterDadosRepetidas(amigo.album);
+              if (repDoAmigo.length === 0) return null;
+
+              return (
+                <div key={amigo.uid} style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '16px', marginBottom: '20px', border: '1px solid #333' }}>
+                  <h3 style={{ margin: '0 0 12px 0', color: '#8b5cf6', fontSize: '1.2rem' }}>
+                    <i className="fa-solid fa-user-tag"></i> Álbum de {amigo.nomeDono}
+                  </h3>
+
+                  {repDoAmigo.map(pais => (
+                    <div key={pais.id} style={{ marginBottom: '12px', background: 'rgba(0,0,0,0.15)', padding: '10px', borderRadius: '8px' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{pais.nome.replace(' - ', '')} ({pais.id}):</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                        {pais.itens.map(item => (
+                          <button
+                            key={item.num}
+                            onClick={() => sinalizarInteresse(amigo.uid, amigo.nomeDono, pais.id, item.num)}
+                            style={{ background: '#1e1b4b', border: '1px solid #4338ca', color: '#fff', padding: '6px 10px', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                          >
+                            <span>Nº {item.num} ({item.qtd}x)</span>
+                            <i className="fa-solid fa-hand-point-up" style={{ color: '#6366f1' }}></i>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })
           )}
         </div>
       </div>
