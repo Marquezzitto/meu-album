@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, onSnapshot, setDoc, collection, getDocs, addDoc, updateDoc, query, where, getDoc } from "firebase/firestore";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
-import imagemAlbum from './assets/album.png'; // Garanta que o caminho está certinho de onde o App.tsx está
+import imagemAlbum from './assets/album.png';
+
 // ==========================================
 // 1. CONFIGURAÇÃO DO BANCO DE DADOS (FIREBASE)
 // ==========================================
@@ -89,7 +90,6 @@ export default function App() {
   const [idAnfitriao, setIdAnfitriao] = useState(null);
   const [dadosAnfitriao, setDadosAnfitriao] = useState(null);
 
-  // Captura apenas o parâmetro da URL de forma segura
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -122,7 +122,6 @@ export default function App() {
     return () => escutarBanco();
   }, [user]);
 
-  // Busca os dados do convite de forma protegida APÓS o login existir
   useEffect(() => {
     if (!user || !idAnfitriao) return;
     
@@ -317,7 +316,7 @@ export default function App() {
     return (
       <div id="tela-login">
         <div className="login-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px' }}>
-          <img src="src/assets/album.png" alt="Álbum" style={{ width: '130px', borderRadius: '12px', marginBottom: '16px' }}/>
+          <img src={imagemAlbum} alt="Álbum" style={{ width: '130px', borderRadius: '12px', marginBottom: '16px' }}/>
           <h1>Registro de Figurinhas 2026</h1>
           <p style={{ fontSize: '0.85rem', opacity: 0.7, textAlign: 'center', marginBottom: '16px' }}>
             {idAnfitriao ? "Você recebeu um convite de troca! Entre para ver." : "Organize e gerencie suas trocas em tempo real."}
@@ -356,7 +355,7 @@ export default function App() {
           ) : (
             repDoAnfitriao.map(pais => (
               <div key={pais.id} style={{ background: '#1f1f2e', padding: '16px', borderRadius: '12px', marginBottom: '12px' }}>
-                <span style={{尊fontSize: '1.1rem', fontWeight: 'bold' }}>{pais.nome} ({pais.id})</span>
+                <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{pais.nome} ({pais.id})</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
                   {pais.itens.map(item => (
                     <button key={item.num} onClick={() => sinalizarInteresse(idAnfitriao, dadosAnfitriao.nomeDono, pais.id, item.num)} style={{ background: '#1e1b4b', border: '1px solid #4338ca', color: '#fff', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer' }}>
