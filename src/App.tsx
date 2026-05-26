@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, onSnapshot, setDoc, collection, getDocs, addDoc, updateDoc, query, where } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, setDoc, collection, getDocs, addDoc, updateDoc, query, where, getDoc } from "firebase/firestore";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
 
 // ==========================================
@@ -85,6 +85,19 @@ export default function App() {
   const [meuAlbum, setMeuAlbum] = useState({});
   const [albunsAlheios, setAlbunsAlheios] = useState([]);
   const [notificacoes, setNotificacoes] = useState([]);
+  
+  // Estados novos para gerenciar a mecânica de convites por link
+  const [idAnfitriao, setIdAnfitriao] = useState(null);
+  const [dadosAnfitriao, setDadosAnfitriao] = useState(null);
+
+  // Captura se o usuário entrou usando um link de convite (?convite=ID)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const idConvite = params.get('convite');
+    if (idConvite) {
+      setIdAnfitriao(idConvite);
+    }
+  }, []);
 
   useEffect(() => {
     const desligarMonitor = onAuthStateChanged(auth, (loggedUser) => {
@@ -106,6 +119,21 @@ export default function App() {
     });
     return () => escutarBanco();
   }, [user]);
+
+  // Se houver um id de convite no link, busca os dados daquela pessoa pública na hora
+  useEffect(() => {
+    if (!user || !idAnfitriao) return;
+    
+    const buscarAnfitriao = async () => {
+      const docRef = doc(db, "compartilhamentos_publicos", idAnfitriao);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        setDadosAnfitriao(snap.data());
+        setTelaAtual('visualizar_convite'); // Desvia o usuário novo direto para o convite
+      }
+    };
+    buscarAnfitriao();
+  }, [user, idAnfitriao]);
 
   useEffect(() => {
     if (!user) return;
@@ -173,7 +201,7 @@ export default function App() {
     return { tenho, repetidas };
   };
 
-  const obterDadosRepetidas = (albumData = meuAlbum) => {
+  const obtenerDadosRepetidas = (albumData = meuAlbum) => {
     return listaPaises.map(pais => {
       const itemsDoPais = [];
       for (let num = 1; num <= 20; num++) {
@@ -260,12 +288,23 @@ export default function App() {
       alert("Nenhuma repetida encontrada.");
       return;
     }
+    // Cria o link dinâmico usando a URL atual do site + o UID do usuário
+    const linkConvite = `${window.location.origin}${window.location.pathname}?convite=${user.uid}`;
+    
     let texto = `👋 Minhas REPETIDAS do Álbum da Copa 2026:\n\n`;
     repetidas.forEach(p => {
       const listaNums = p.itens.map(i => `${i.num}(${i.qtd}x)`).join(', ');
       texto += `📌 *${p.nome}* [${p.id}]: ${listaNums}\n`;
     });
+    texto += `\n🤝 Quer alguma? Entra no app pelo meu link de convite e clica em pedir:\n${linkConvite}`;
+    
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+  };
+
+  const copiarLinkDireto = () => {
+    const linkConvite = `${window.location.origin}${window.location.pathname}?convite=${user.uid}`;
+    navigator.clipboard.writeText(linkConvite);
+    alert("Link de convite pessoal copiado para a área de transferência! É só colar para os seus amigos.");
   };
 
   // --- TELA DE LOGIN ---
@@ -275,7 +314,57 @@ export default function App() {
         <div className="login-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <img src="assets/album.png" alt="Álbum" style={{ width: '130px', borderRadius: '12px', marginBottom: '16px' }}/>
           <h1>Registro de Figurinhas 2026</h1>
+          <p style={{ fontSize: '0.85rem', opacity: 0.7, textAlign: 'center', marginBottom: '16px' }}>
+            {idAnfitriao ? "Você recebeu um convite de troca! Faça login para ver as repetidas." : "Organize e gerencie suas trocas em tempo real."}
+          </p>
           <button onClick={() => signInWithPopup(auth, provider)} className="btn btn-primary">Entrar com Conta Google</button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- TELA 5: TELA EXCLUSIVA DO LINK DE CONVITE (PARA QUEM ENTROU PELO LINK) ---
+  if (telaAtual === 'visualizar_convite' && dadosAnfitriao) {
+    const repDoAnfitriao = obterDadosRepetidas(dadosAnfitriao.album);
+    return (
+      <div>
+        <header>
+          <div className="header-container">
+            <button onClick={() => setTelaAtual('lista')} className="btn-logout" style={{ borderColor: '#3b82f6', color: '#3b82f6' }}>
+              <i className="fa-solid fa-book-open"></i> Ir Para Meu Álbum Pessoal
+            </button>
+          </div>
+        </header>
+
+        <div className="main-container" style={{ maxWidth: '600px' }}>
+          <div style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid #8b5cf6', borderRadius: '16px', padding: '20px', marginBottom: '24px', textAlign: 'center' }}>
+            <h2>👋 Olá, {user.displayName}!</h2>
+            <p style={{ fontSize: '0.9rem', opacity: '0.8', marginTop: '4px' }}>
+              Você entrou pelo link de convite do <b>{dadosAnfitriao.nomeDono}</b>.
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#8b5cf6', fontWeight: 'bold', marginTop: '6px' }}>
+              Escolha abaixo quais figurinhas repetidas dele você precisa e clique em Pedir!
+            </p>
+          </div>
+
+          <h3 className="text-gray-400 font-bold text-xs tracking-wider mb-4 uppercase">Repetidas Disponíveis de {dadosAnfitriao.nomeDono}:</h3>
+          
+          {repDoAnfitriao.length === 0 ? (
+            <p style={{ opacity: 0.5, textAlign: 'center' }}>O amigo não possui mais figurinhas repetidas no momento.</p>
+          ) : (
+            repDoAnfitriao.map(pais => (
+              <div key={pais.id} style={{ background: '#1f1f2e', padding: '16px', borderRadius: '12px', marginBottom: '12px', border: '1px solid #2e2e36' }}>
+                <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{pais.nome} ({pais.id})</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                  {pais.itens.map(item => (
+                    <button key={item.num} onClick={() => sinalizarInteresse(idAnfitriao, dadosAnfitriao.nomeDono, pais.id, item.num)} style={{ background: '#1e1b4b', border: '1px solid #4338ca', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                      Nº {item.num} ({item.qtd}x) 🤝 Pedir
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     );
@@ -342,7 +431,7 @@ export default function App() {
               return (
                 <div key={pais.id} style={{ background: '#1f1f2e', borderRadius: '16px', padding: '20px', border: '1px solid #2e2e36' }}>
                   
-                  {/* Cabeçalho da seleção com sigla bem afastada */}
+                  {/* Cabeçalho da seleção */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                       <img src={`https://flagcdn.com/w40/${pais.code}.png`} style={{ width: '36px', borderRadius: '4px', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }} alt={pais.nome}/>
@@ -352,7 +441,7 @@ export default function App() {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ background: tenho === 20 ? '#10b981' : '#2a2a3a', padding: '6px 12px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold' }}>{tenho} / 20</span>
+                      <span style={{ background: tengo === 20 ? '#10b981' : '#2a2a3a', padding: '6px 12px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold' }}>{tenho} / 20</span>
                       {repetidas > 0 && <span style={{ fontSize: '11px', color: '#3b82f6', display: 'block', marginTop: '6px', fontWeight: 'bold' }}>+{repetidas} repetidas</span>}
                     </div>
                   </div>
@@ -395,9 +484,16 @@ export default function App() {
       <div>
         <header><div className="header-container"><button onClick={() => setTelaAtual('lista')} className="btn-logout">Voltar para o Álbum</button></div></header>
         <div className="main-container" style={{ maxWidth: '500px' }}>
-          <button onClick={compartilharWhatsApp} style={{ width: '100%', background: '#25D366', color: '#fff', padding: '14px', borderRadius: '12px', fontWeight: 'bold', border: 'none', marginBottom: '20px', cursor: 'pointer' }}>
-            Compartilhar no WhatsApp
-          </button>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+            <button onClick={compartilharWhatsApp} style={{ width: '100%', background: '#25D366', color: '#fff', padding: '14px', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
+              Compartilhar no WhatsApp com Link
+            </button>
+            <button onClick={copiarLinkDireto} style={{ width: '100%', background: '#3b82f6', color: '#fff', padding: '14px', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
+              🔗 Copiar Meu Link de Convite Direto
+            </button>
+          </div>
+
           {obterDadosRepetidas().map(pais => (
             <div key={pais.id} style={{ background: '#1f1f2e', padding: '16px', borderRadius: '12px', marginBottom: '12px' }}>
               <h4>{pais.nome}</h4>
