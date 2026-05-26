@@ -45,7 +45,7 @@ const listaPaises = [
   { id: 'CUW', nome: 'Curaçao', code: 'cw' },
   { id: 'CIV', nome: 'Costa do Marfim', code: 'ci' },
   { id: 'ECU', nome: 'Equador', code: 'ec' },
-  { id: 'NED', nome: 'Holanda', code: 'nl' }, // Corrigido aqui!
+  { id: 'NED', nome: 'Holanda', code: 'nl' },
   { id: 'JPN', nome: 'Japão', code: 'jp' },
   { id: 'SWE', nome: 'Suécia', code: 'se' },
   { id: 'TUN', nome: 'Tunísia', code: 'tn' },
@@ -229,7 +229,7 @@ export default function App() {
     return { tenho, repetidas };
   };
 
-  const obterDadosRepetidas = (albumData = meuAlbum) => {
+  const obtenerDadosRepetidas = (albumData = meuAlbum) => {
     return listaPaises.map(pais => {
       const itemsDoPais = [];
       for (let num = 1; num <= 20; num++) {
@@ -240,6 +240,7 @@ export default function App() {
     }).filter(pais => pais.itens.length > 0);
   };
 
+  // Função central de cruzamento de dados inteligente
   const obterRepetidasFiltradasParaMim = (albumAnfitriao) => {
     return listaPaises.map(pais => {
       const itensQueMeFaltam = [];
@@ -626,37 +627,55 @@ export default function App() {
     );
   }
 
-  // --- TELA 4: VER COMPARTILHAMENTO DE OUTRAS PESSOAS NO APP ---
+  // --- TELA 4: VER COMPARTILHAMENTO DE OUTRAS PESSOAS NO APP (ATUALIZADA E FILTRADA) ---
   if (telaAtual === 'comunidade') {
     return (
       <div>
         <header><div className="header-container"><button onClick={() => setTelaAtual('lista')} className="btn-logout">Voltar para o Álbum</button></div></header>
         <div className="main-container" style={{ maxWidth: '600px' }}>
           <h2>👥 Painel de Trocas da Comunidade</h2>
+          <p style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '20px' }}>
+            Abaixo aparecem apenas os amigos que têm as repetidas que <b>faltam no seu álbum</b>.
+          </p>
+          
           {albunsAlheios.length === 0 ? (
             <p style={{ opacity: 0.5, textAlign: 'center' }}>Nenhum outro amigo compartilhou figurinhas ainda.</p>
           ) : (
-            albunsAlheios.map((amigo) => {
-              const repDoAmigo = obterDadosRepetidas(amigo.album);
-              if (repDoAmigo.length === 0) return null;
-              return (
-                <div key={amigo.uid} style={{ background: '#1f1f2e', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
-                  <h3 style={{ color: '#8b5cf6', margin: '0 0 12px 0' }}>📦 Álbum de {amigo.nomeDono}</h3>
-                  {repDoAmigo.map(pais => (
-                    <div key={pais.id} style={{ marginBottom: '10px', background: '#111', padding: '10px', borderRadius: '8px' }}>
-                      <span><b>{pais.nome}</b>:</span>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
-                        {pais.itens.map(item => (
-                          <button key={item.num} onClick={() => sinalizarInteresse(amigo.uid, amigo.nomeDono, pais.id, item.num)} style={{ background: '#1e1b4b', border: '1px solid #4338ca', color: '#fff', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer' }}>
-                            Nº {item.num} ({item.qtd}x) 🤝 Pedir
-                          </button>
-                        ))}
+            (() => {
+              let temAlgumResultado = false;
+              const conteudoFiltrado = albunsAlheios.map((amigo) => {
+                // ATUALIZADO: Filtra as repetidas do amigo baseando-se no que EU preciso
+                const repFiltradasParaMim = obterRepetidasFiltradasParaMim(amigo.album);
+                
+                // Se ele não tiver nenhuma que me sirva, pula o card dele inteiro
+                if (repFiltradasParaMim.length === 0) return null;
+                
+                temAlgumResultado = true;
+                return (
+                  <div key={amigo.uid} style={{ background: '#1f1f2e', borderRadius: '16px', padding: '16px', marginBottom: '20px', border: '1px solid #2e2e36' }}>
+                    <h3 style={{ color: '#8b5cf6', margin: '0 0 12px 0' }}>📦 Álbum de {amigo.nomeDono}</h3>
+                    {repFiltradasParaMim.map(pais => (
+                      <div key={pais.id} style={{ marginBottom: '10px', background: '#111', padding: '10px', borderRadius: '8px' }}>
+                        <span><b>{pais.nome}</b>:</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                          {pais.itens.map(item => (
+                            <button key={item.num} onClick={() => sinalizarInteresse(amigo.uid, amigo.nomeDono, pais.id, item.num)} style={{ background: '#1e1b4b', border: '1px solid #4338ca', color: '#fff', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer' }}>
+                              Nº {item.num} ({item.qtd}x) 🤝 Pedir
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                );
+              });
+
+              return temAlgumResultado ? conteudoFiltrado : (
+                <p style={{ opacity: 0.5, textAlign: 'center', padding: '24px' }}>
+                  🙌 Nenhum dos seus amigos no app tem alguma figurinha repetida que esteja faltando para você no momento!
+                </p>
               );
-            })
+            })()
           )}
         </div>
       </div>
