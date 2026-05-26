@@ -22,7 +22,7 @@ const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
 // ==========================================
-// 2. LISTA OFICIAL DE SELEÇÕES (48 PAÍSES) - ORDEM AJUSTADA
+// 2. LISTA OFICIAL DE SELEÇÕES (48 PAÍSES)
 // ==========================================
 const listaPaises = [
   { id: 'MEX', nome: 'México', code: 'mx' },
@@ -48,7 +48,7 @@ const listaPaises = [
   { id: 'NED', nome: 'Holanda', code: 'nl' },
   { id: 'JPN', nome: 'Japão', code: 'jp' },
   { id: 'SWE', nome: 'Suécia', code: 'se' },
-  { id: 'TUN', nome: 'Tunísia', code: 'tn' }, // Tunísia abaixo da Suécia
+  { id: 'TUN', nome: 'Tunísia', code: 'tn' },
   { id: 'BEL', nome: 'Bélgica', code: 'be' },
   { id: 'EGY', nome: 'Egito', code: 'eg' },
   { id: 'IRN', nome: 'Irã', code: 'ir' },
@@ -72,7 +72,7 @@ const listaPaises = [
   { id: 'ENG', nome: 'Inglaterra', code: 'gb-eng' },
   { id: 'CRO', nome: 'Croácia', code: 'hr' },
   { id: 'GHA', nome: 'Gana', code: 'gh' },
-  { id: 'PAN', nome: 'Panamá', code: 'pa' } // Panamá por último
+  { id: 'PAN', nome: 'Panamá', code: 'pa' }
 ];
 
 const vinteNumeros = Array.from({ length: 20 }, (_, i) => i + 1);
@@ -196,7 +196,7 @@ export default function App() {
     .reduce((sum, key) => sum + (Number(meuAlbum[key]) || 0), 0);
 
   const contarFigurinhasDoPais = (paisId) => {
-    letDynamic: let tenho = 0;
+    let tenho = 0;
     let repetidas = 0;
     for (let i = 1; i <= 20; i++) {
       if (meuAlbum[`${paisId}-${i}`] === true) tenho++;
@@ -408,7 +408,7 @@ export default function App() {
             <div className="progress-bar-container"><div className="progress-bar-fill" style={{ width: `${porcentagemProgresso}%` }}></div></div>
             <div className="cards-stats">
               <div className="stat-card total"><div className="label">Total</div><div className="value">{totalFigurinhasNoAlbum}</div></div>
-              <div className="stat-card tenho"><div className="label">Tenho</div><div className="value">{quantasEuTenhoGeral}</div></div>
+              <div className="stat-card tengo"><div className="label">Tenho</div><div className="value">{quantasEuTenhoGeral}</div></div>
               <div className="stat-card faltam"><div className="label">Faltam</div><div className="value">{quantasFaltamGeral}</div></div>
             </div>
           </div>
