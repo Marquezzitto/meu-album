@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, onSnapshot, setDoc, collection, getDocs } from "firebase/firestore";
+import { getFirestore, doc, onSnapshot, setDoc, collection, getDocs, addDoc, updateDoc, query, where } from "firebase/firestore";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
 
 // ==========================================
@@ -97,6 +97,7 @@ export default function App() {
     return () => desligarMonitor();
   }, []);
 
+  // Monitorar o álbum pessoal no Firestore
   useEffect(() => {
     if (!user) return;
     const documentoDoUsuario = doc(db, "usuarios_figurinhas", user.uid);
@@ -106,20 +107,27 @@ export default function App() {
     return () => escutarBanco();
   }, [user]);
 
-  // Monitorar notificações e interesse de amigos em tempo real
+  // ESCUTAR REQUISIÇÕES DE TROCA DE VERDADE (Tempo Real)
   useEffect(() => {
     if (!user) return;
-    const docNotif = doc(db, "notificacoes_trocas", user.uid);
-    const escutarNotif = onSnapshot(docNotif, (snapshot) => {
-      if (snapshot.exists()) {
-        const dados = snapshot.data();
-        setNotificacoes(dados.pedidos || []);
-      }
+    const q = query(
+      collection(db, "pedidos_trocas"), 
+      where("paraUid", "==", user.uid),
+      where("status", "==", "pendente")
+    );
+    
+    const escutarPedidos = onSnapshot(q, (snapshot) => {
+      const listaPedidos = [];
+      snapshot.forEach((doc) => {
+        listaPedidos.push({ id: doc.id, ...doc.data() });
+      });
+      setNotificacoes(listaPedidos);
     });
-    return () => escutarNotif();
+    
+    return () => escutarPedidos();
   }, [user]);
 
-  // Buscar álbuns compartilhados no app por outros usuários
+  // Carregar os álbuns dos outros usuários para a aba de trocas
   const carregarAlbunsDoApp = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "compartilhamentos_publicos"));
@@ -132,7 +140,7 @@ export default function App() {
       setAlbunsAlheios(lista);
       setTelaAtual('comunidade');
     } catch (e) {
-      console.error("Erro ao carregar comunidade: ", e);
+      console.error("Erro ao carregar trocas: ", e);
     }
   };
 
@@ -167,7 +175,6 @@ export default function App() {
     return { tenho, faltam: 20 - tenho, repetidas };
   };
 
-  // Função auxiliar para gerar a lista estruturada de repetidas
   const obterDadosRepetidas = (albumData = meuAlbum) => {
     return listaPaises.map(pais => {
       const itemsDoPais = [];
@@ -179,14 +186,13 @@ export default function App() {
     }).filter(pais => pais.itens.length > 0);
   };
 
-  // Sincroniza dados no banco pessoal e no espelho público de trocas
   const salvarNoBancoCompleto = async (novoAlbum) => {
     if (!user) return;
     await setDoc(doc(db, "usuarios_figurinhas", user.uid), novoAlbum);
     
-    // Salva também na aba pública para os amigos poderem ver dentro do app
+    // Atualiza o espelho público
     await setDoc(doc(db, "compartilhamentos_publicos", user.uid), {
-      nomeDono: user.displayName || "Amigo Anônimo",
+      nomeDono: user.displayName || "Amigo",
       album: novoAlbum,
       atualizadoEm: new Date().toISOString()
     });
@@ -210,43 +216,67 @@ export default function App() {
     await salvarNoBancoCompleto(albumAtualizado);
   };
 
-  // ENVIAR SINALIZAÇÃO / INTERESSE DENTRO DO APP
+  // SINALIZAR INTERESSE CRIANDO REGISTRO DE TROCA REAL
   const sinalizarInteresse = async (donoUid, donoNome, itemPais, itemNum) => {
     try {
-      const docRef = doc(db, "notificacoes_trocas", donoUid);
-      // Criamos um alerta simples que vai aparecer direto na tela do seu amigo
-      const novoPedido = {
-        quemQuer: user.displayName || "Um amigo",
-        item: `${itemPais} ${itemNum}`,
-        data: new Date().toLocaleDateString('pt-BR')
-      };
+      await addDoc(collection(db, "pedidos_trocas"), {
+        deUid: user.uid,
+        deNome: user.displayName || "Alguém",
+        paraUid: donoUid,
+        paraNome: donoNome,
+        paisId: itemPais,
+        numero: itemNum,
+        status: "pendente",
+        dataCriacao: new Date().toISOString()
+      });
+      alert(`Pedido enviado! O ${donoNome} recebeu o alerta no app para te passar a figurinha ${itemPais} ${itemNum}.`);
+    } catch(e) {
+      console.error("Erro ao pedir troca: ", e);
+    }
+  };
+
+  // GERENCIAR PEDIDOS RECEBIDOS (ACEITAR / RECUSAR)
+  const responderTroca = async (pedidoId, acao, paisId, numero) => {
+    try {
+      const pedidoRef = doc(db, "pedidos_trocas", pedidoId);
       
-      alert(`Sinalizado! Avisamos o ${donoNome} que você quer a figurinha ${itemPais} ${itemNum}!`);
-      
-      // Armazena a sinalização no documento do amigo no Firebase
-      await setDoc(docRef, { pedidos: [novoPedido] }, { merge: true });
+      if (acao === 'aceitar') {
+        const apiKey = `${paisId}-${numero}-rep`;
+        const qtdAtual = Number(meuAlbum[apiKey]) || 0;
+        
+        if (qtdAtual <= 0) {
+          alert("Você não tem mais essa figurinha repetida em estoque!");
+          await updateDoc(pedidoRef, { status: "recusado_sem_estoque" });
+          return;
+        }
+
+        // Subtrai 1 das repetidas automaticamente
+        const albumAtualizado = { ...meuAlbum, [apiKey]: qtdAtual - 1 };
+        await salvarNoBancoCompleto(albumAtualizado);
+        await updateDoc(pedidoRef, { status: "aceito" });
+        alert("Troca aceita! A figurinha já foi descontada do seu banco de repetidas.");
+      } else {
+        await updateDoc(pedidoRef, { status: "recusado" });
+        alert("Troca recusada.");
+      }
     } catch(e) {
       console.error(e);
     }
   };
 
-  // GERAR LINK COMPARTILHAMENTO WHATSAPP
+  // LINK WHATSAPP
   const compartilharWhatsApp = () => {
     const repetidas = obterDadosRepetidas();
     if (repetidas.length === 0) {
-      alert("Você não tem figurinhas repetidas marcadas para compartilhar!");
+      alert("Nenhuma repetida encontrada.");
       return;
     }
-
-    let texto = `👋 Fala galera! Aqui estão minhas figurinhas REPETIDAS do Álbum da Copa 2026:\n\n`;
-    repetidas.forEach(pais => {
-      const listaNums = pais.itens.map(i => `${i.num}(${i.qtd}x)`).join(', ');
-      texto += `📌 *${pais.nome.replace(' - ', '')}* [${pais.id}]: ${listaNums}\n`;
+    let texto = `👋 Minhas REPETIDAS do Álbum da Copa 2026:\n\n`;
+    repetidas.forEach(p => {
+      const listaNums = p.itens.map(i => `${i.num}(${i.qtd}x)`).join(', ');
+      texto += `📌 *${p.nome.replace(' - ', '')}* [${p.id}]: ${listaNums}\n`;
     });
-    texto += `\nQuem precisar de alguma me avisa aqui!`;
-
-    const urlWhats = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
-    window.open(urlWhats, '_blank');
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
   };
 
   // --- TELA DE LOGIN ---
@@ -254,16 +284,9 @@ export default function App() {
     return (
       <div id="tela-login">
         <div className="login-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <img 
-            src="assets/album.png" 
-            alt="Álbum Oficial Copa 2026"
-            style={{ width: '130px', height: 'auto', borderRadius: '12px', marginBottom: '16px', boxShadow: '0 6px 16px rgba(0,0,0,0.6)' }}
-          />
+          <img src="assets/album.png" alt="Álbum" style={{ width: '130px', borderRadius: '12px', marginBottom: '16px' }}/>
           <h1>Registro de Figurinhas 2026</h1>
-          <p>Entre com seu e-mail. Suas marcações ficam salvas de forma individual sem misturar com ninguém!</p>
-          <button onClick={() => signInWithPopup(auth, provider)} className="btn btn-primary">
-            <i className="fa-brands fa-google"></i> Entrar com Conta Google
-          </button>
+          <button onClick={() => signInWithPopup(auth, provider)} className="btn btn-primary">Entrar com Conta Google</button>
         </div>
       </div>
     );
@@ -275,117 +298,71 @@ export default function App() {
       <div>
         <header>
           <div className="header-container">
-            <div className="user-info">
-              <i className="fa-solid fa-user"></i>
-              <span>{user.displayName || "Usuário"}</span>
-            </div>
-            <button onClick={() => signOut(auth)} className="btn-logout">
-              <i className="fa-solid fa-right-from-bracket"></i> Sair
-            </button>
+            <div className="user-info"><span>{user.displayName || "Usuário"}</span></div>
+            <button onClick={() => signOut(auth)} className="btn-logout">Sair</button>
           </div>
         </header>
 
         <div className="main-container" style={{ maxWidth: '1200px' }}>
           
-          {/* PAINEL DE SINALIZAÇÕES RECEBIDAS */}
+          {/* PAINEL DE SINALIZAÇÕES ATIVAS INTERATIVO */}
           {notificacoes.length > 0 && (
-            <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '2px solid #10b981', borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
-              <h4 style={{ color: '#10b981', margin: 0, fontSize: '0.95rem', fontWeight: 'bold' }}>📢 Tem alguém interessado nas suas repetidas!</h4>
-              {notificacoes.map((n, idx) => (
-                <p key={idx} style={{ margin: '6px 0 0 0', fontSize: '0.85rem', opacity: 0.9 }}>
-                  • <b>{n.quemQuer}</b> sinalizou interesse na sua figurinha <b>{n.item}</b> em {n.data}.
-                </p>
-              ))}
+            <div style={{ background: '#111827', border: '2px solid #10b981', borderRadius: '14px', padding: '16px', marginBottom: '24px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+              <h4 style={{ color: '#10b981', margin: '0 0 12px 0', fontSize: '1rem', fontWeight: 'bold' }}>📢 Solicitações de Troca Pendentes:</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {notificacoes.map((pedido) => (
+                  <div key={pedido.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <span style={{ fontSize: '0.85rem' }}>👉 <b>{pedido.deNome}</b> quer a sua figurinha <b>{pedido.paisId} - Nº {pedido.numero}</b></span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => responderTroca(pedido.id, 'aceitar', pedido.paisId, pedido.numero)} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Aceitar</button>
+                      <button onClick={() => responderTroca(pedido.id, 'recusar', pedido.paisId, pedido.numero)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Recusar</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Dashboard de Progresso */}
+          {/* Dashboard */}
           <div className="dashboard-progresso">
-            <div className="dashboard-header">
-              <h2><i className="fa-solid fa-chart-line"></i> Seu Progresso ({porcentagemProgresso}%)</h2>
-            </div>
-            <div className="progress-bar-container">
-              <div className="progress-bar-fill" style={{ width: `${porcentagemProgresso}%` }}></div>
-            </div>
+            <h2> Seu Progresso ({porcentagemProgresso}%)</h2>
+            <div className="progress-bar-container"><div className="progress-bar-fill" style={{ width: `${porcentagemProgresso}%` }}></div></div>
             <div className="cards-stats">
-              <div className="stat-card total">
-                <div className="label">Total</div>
-                <div className="value">{totalFigurinhasNoAlbum}</div>
-              </div>
-              <div className="stat-card tenho">
-                <div className="label">Tenho</div>
-                <div className="value">{quantasEuTenhoGeral}</div>
-              </div>
-              <div className="stat-card faltam">
-                <div className="label">Faltam</div>
-                <div className="value">{quantasFaltamGeral}</div>
-              </div>
+              <div className="stat-card total"><div className="label">Total</div><div className="value">{totalFigurinhasNoAlbum}</div></div>
+              <div className="stat-card tenho"><div className="label">Tenho</div><div className="value">{quantasEuTenhoGeral}</div></div>
+              <div className="stat-card faltam"><div className="label">Faltam</div><div className="value">{quantasFaltamGeral}</div></div>
             </div>
           </div>
 
-          {/* DOIS BOTÕES DE CONTROLE DE TROCAS */}
+          {/* Menu de Controle */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
-            <button 
-              onClick={() => setTelaAtual('repetidas')}
-              className="btn btn-primary" 
-              style={{ background: '#3b82f6', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '14px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '700' }}
-            >
-              <span>🔄 Minhas Repetidas ({totalRepetidasGeral})</span>
+            <button onClick={() => setTelaAtual('repetidas')} className="btn btn-primary" style={{ background: '#3b82f6', padding: '14px', borderRadius: '12px', fontWeight: '700' }}>
+              🔄 Minhas Repetidas ({totalRepetidasGeral})
             </button>
-
-            <button 
-              onClick={carregarAlbunsDoApp}
-              className="btn btn-primary" 
-              style={{ background: '#8b5cf6', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', padding: '14px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '700' }}
-            >
-              <span>👥 Ver Trocas do App</span>
+            <button onClick={carregarAlbunsDoApp} className="btn btn-primary" style={{ background: '#8b5cf6', padding: '14px', borderRadius: '12px', fontWeight: '700' }}>
+              👥 Ver Trocas do App
             </button>
           </div>
 
-          <h2 className="text-gray-400 font-bold text-xs tracking-wider mb-4 uppercase">Seleções (Toque para abrir)</h2>
-          
           <div className="grid-paises">
             {listaPaises.map((pais) => {
               const { tenho, repetidas } = contarFigurinhasDoPais(pais.id);
               const completo = tenho === 20;
               const porcentagemPais = (tenho / 20) * 100;
               return (
-                <div 
-                  key={pais.id}
-                  onClick={() => { setPaisAberto(pais); setTelaAtual('pais'); }}
-                  className={`pais-card ${completo ? 'completo' : ''}`}
-                  style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '90px' }}
-                >
-                  <div className="pais-info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: '1', minWidth: '0' }}>
-                      <img 
-                        src={`https://flagcdn.com/w40/${pais.code}.png`} 
-                        alt={`Bandeira de ${pais.nome}`}
-                        style={{ width: '32px', height: 'auto', borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.3)', flexShrink: '0' }}
-                      />
-                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: '0' }}>
-                        <span className="pais-nome" style={{ fontSize: '1.1rem', fontWeight: '800', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: '1.2' }}>
-                          {pais.nome.replace(' - ', '')}
-                        </span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: '600', opacity: '0.4', textTransform: 'uppercase' }}>
-                          {pais.id}
-                        </span>
-                      </div>
+                <div key={pais.id} onClick={() => { setPaisAberto(pais); setTelaAtual('pais'); }} className={`pais-card ${completo ? 'completo' : ''}`}>
+                  <div className="pais-info">
+                    <img src={`https://flagcdn.com/w40/${pais.code}.png`} style={{ width: '32px', borderRadius: '4px' }}/>
+                    <div>
+                      <span className="pais-nome">{pais.nome.replace(' - ', '')}</span>
+                      <span style={{ fontSize: '10px', opacity: 0.4 }}>{pais.id}</span>
                     </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: '0', minWidth: '55px' }}>
-                      <span className="pais-badge" style={{ whiteSpace: 'nowrap' }}>{tenho} / 20</span>
-                      {repetidas > 0 ? (
-                        <span style={{ fontSize: '10px', color: '#3b82f6', fontWeight: '700', marginTop: '2px', whiteSpace: 'nowrap' }}>+{repetidas} rep</span>
-                      ) : (
-                        <span style={{ fontSize: '10px', opacity: '0', marginTop: '2px' }}>-</span>
-                      )}
+                    <div style={{ textAlign: 'right' }}>
+                      <span className="pais-badge">{tenho}/20</span>
+                      {repetidas > 0 && <span style={{ fontSize: '10px', color: '#3b82f6', display: 'block' }}>+{repetidas} rep</span>}
                     </div>
                   </div>
-                  
-                  <div className="mini-progress-bg" style={{ marginTop: 'auto' }}>
-                    <div className="mini-progress-bar" style={{ width: `${porcentagemPais}%` }}></div>
-                  </div>
+                  <div className="mini-progress-bg"><div className="mini-progress-bar" style={{ width: `${porcentagemPais}%` }}></div></div>
                 </div>
               );
             })}
@@ -398,81 +375,27 @@ export default function App() {
   // --- TELA 2: LISTA DE NÚMEROS DE CADA PAÍS ---
   if (telaAtual === 'pais' && paisAberto) {
     const { tenho: localTenho, faltam: localFaltam, repetidas: localRepetidas } = contarFigurinhasDoPais(paisAberto.id);
-    const vinteNumeros = Array.from({ length: 20 }, (_, i) => i + 1);
-
     return (
       <div>
-        <header>
-          <div className="header-container">
-            <button onClick={() => setTelaAtual('lista')} className="btn-logout" style={{ borderColor: 'var(--cor-primaria)', color: 'var(--cor-primaria)' }}>
-              <i className="fa-solid fa-arrow-left"></i> Voltar para a Lista
-            </button>
-          </div>
-        </header>
-
+        <header><div className="header-container"><button onClick={() => setTelaAtual('lista')} className="btn-logout">Voltar para a Lista</button></div></header>
         <div className="main-container" style={{ maxWidth: '500px' }}>
-          <div className="pais-card completo" style={{ cursor: 'default', marginBottom: '24px', padding: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <img 
-                src={`https://flagcdn.com/w80/${paisAberto.code}.png`} 
-                alt={`Bandeira de ${paisAberto.nome}`}
-                style={{ width: '64px', height: 'auto', borderRadius: '6px', boxShadow: '0 4px 8px rgba(0,0,0,0.4)' }}
-              />
-              <div>
-                <h2 style={{ fontSize: '1.6rem', fontWeight: '800' }}>{paisAberto.nome.replace(' - ', '')}</h2>
-                <div style={{ display: 'flex', gap: '6px', marginTop: '2px', fontSize: '0.75rem', fontWeight: '700' }}>
-                  <span style={{ opacity: '0.5', color: '#fff' }}>Sigla: {paisAberto.id}</span>
-                </div>
-                <div style={{ display: 'flex', gap: '6px', marginTop: '6px', fontSize: '0.75rem', fontWeight: '700', flexWrap: 'wrap' }}>
-                  <span style={{ color: 'var(--cor-sucesso)', background: 'var(--cor-sucesso-bg)', padding: '2px 8px', borderRadius: '6px' }}>Tenho: {localTenho}</span>
-                  <span style={{ color: 'var(--cor-perigo)', background: 'rgba(239, 68, 68, 0.12)', padding: '2px 8px', borderRadius: '6px' }}>Faltam: {localFaltam}</span>
-                  {localRepetidas > 0 && (
-                    <span style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.15)', padding: '2px 8px', borderRadius: '6px' }}>Repetidas: {localRepetidas}</span>
-                  )}
-                </div>
-              </div>
-            </div>
+          <div className="pais-card completo" style={{ padding: '20px', marginBottom: '20px' }}>
+            <h2>{paisAberto.nome.replace(' - ', '')}</h2>
+            <span style={{ color: '#10b981' }}>Tenho: {localTenho}</span> | <span style={{ color: '#ef4444' }}>Faltam: {localFaltam}</span>
           </div>
-
-          <h3 className="text-gray-400 font-bold text-xs tracking-wider mb-4 uppercase">Clique no número para colar ou gerencie as repetidas:</h3>
-          
           <div className="grid-figurinhas" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-            {vinteNumeros.map((num) => {
+            {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => {
               const marcado = meuAlbum[`${paisAberto.id}-${num}`] === true;
               const qtdRepetida = Number(meuAlbum[`${paisAberto.id}-${num}-rep`]) || 0;
-              
               return (
-                <div 
-                  key={num} 
-                  style={{ background: 'var(--bg-card)', borderRadius: '12px', border: marcado ? '2px solid var(--cor-sucesso)' : '1px solid #2e2e36', padding: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '8px' }}
-                >
-                  <button
-                    onClick={() => clicarNoNumero(paisAberto.id, num)}
-                    className={`figurinha-btn ${marcado ? 'marcado' : ''}`}
-                    style={{ display: 'flex', flexDirection: 'column', height: 'auto', padding: '6px 0', border: 'none', background: marcado ? 'var(--cor-sucesso)' : 'transparent', width: '100%' }}
-                  >
-                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{num}</span>
-                    <span style={{ fontSize: '8px', fontWeight: '600', opacity: '0.6', textTransform: 'uppercase' }}>
-                      {num === 1 ? 'Escudo' : num === 13 ? 'Time' : 'Jogador'}
-                    </span>
+                <div key={num} style={{ background: '#1f1f2e', padding: '10px', borderRadius: '12px', border: marcado ? '2px solid #10b981' : '1px solid #333' }}>
+                  <button onClick={() => clicarNoNumero(paisAberto.id, num)} style={{ width: '100%', background: marcado ? '#10b981' : 'transparent', color: '#fff', border: 'none', padding: '8px', cursor: 'pointer' }}>
+                    {num}
                   </button>
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '4px 6px' }}>
-                    <button 
-                      onClick={() => alterarRepetida(paisAberto.id, num, 'menos')}
-                      style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', padding: '0 6px' }}
-                    >
-                      -
-                    </button>
-                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: qtdRepetida > 0 ? '#3b82f6' : 'var(--texto-secundario)' }}>
-                      {qtdRepetida} rep
-                    </span>
-                    <button 
-                      onClick={() => alterarRepetida(paisAberto.id, num, 'mais')}
-                      style={{ background: 'none', border: 'none', color: '#10b981', fontWeight: '900', fontSize: '1.1rem', cursor: 'pointer', padding: '0 6px' }}
-                    >
-                      +
-                    </button>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+                    <button onClick={() => alterarRepetida(paisAberto.id, num, 'menos')} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer' }}>-</button>
+                    <span>{qtdRepetida} rep</span>
+                    <button onClick={() => alterarRepetida(paisAberto.id, num, 'mais')} style={{ color: '#10b981', border: 'none', background: 'none', cursor: 'pointer' }}>+</button>
                   </div>
                 </div>
               );
@@ -485,73 +408,25 @@ export default function App() {
 
   // --- TELA 3: PÁGINA EXCLUSIVA SÓ PARA REPETIDAS ---
   if (telaAtual === 'repetidas') {
-    const listaRepetidasAgrupadas = obterDadosRepetidas();
-
     return (
       <div>
-        <header>
-          <div className="header-container">
-            <button onClick={() => setTelaAtual('lista')} className="btn-logout" style={{ borderColor: 'var(--cor-primaria)', color: 'var(--cor-primaria)' }}>
-              <i className="fa-solid fa-arrow-left"></i> Voltar para o Álbum
-            </button>
-          </div>
-        </header>
-
+        <header><div className="header-container"><button onClick={() => setTelaAtual('lista')} className="btn-logout">Voltar para o Álbum</button></div></header>
         <div className="main-container" style={{ maxWidth: '500px' }}>
-          <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', borderRadius: '16px', padding: '20px', marginBottom: '16px', textAlign: 'center' }}>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#3b82f6' }}>🔄 Banco de Repetidas</h2>
-            <p style={{ fontSize: '0.85rem', opacity: '0.7', marginTop: '4px' }}>Aqui você vê todas as figurinhas que tem sobrando para trocar!</p>
-            <div style={{ fontSize: '2.2rem', fontWeight: '900', marginTop: '10px', color: '#fff' }}>{totalRepetidasGeral}</div>
-            <span style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: '#3b82f6' }}>Total de Figurinhas</span>
-          </div>
-
-          {/* BOTÃO COMPARTILHAR NO WHATSAPP */}
-          <button 
-            onClick={compartilharWhatsApp}
-            className="btn"
-            style={{ width: '100%', marginBottom: '24px', background: '#25D366', color: '#fff', padding: '14px', borderRadius: '12px', fontSize: '1rem', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', border: 'none', cursor: 'pointer' }}
-          >
-            <i className="fa-brands fa-whatsapp" style={{ fontSize: '1.3rem' }}></i> Compartilhar no WhatsApp
+          <button onClick={compartilharWhatsApp} style={{ width: '100%', background: '#25D366', color: '#fff', padding: '14px', borderRadius: '12px', fontWeight: 'bold', border: 'none', marginBottom: '20px', cursor: 'pointer' }}>
+            Compartilhar no WhatsApp
           </button>
-
-          <h3 className="text-gray-400 font-bold text-xs tracking-wider mb-4 uppercase">Minhas Sobras por País:</h3>
-
-          {listaRepetidasAgrupadas.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--texto-secundario)', background: 'var(--bg-card)', borderRadius: '12px', border: '1px dashed #2e2e36' }}>
-              <p style={{ fontSize: '1.2rem' }}>🤷‍♂️ Nenhuma repetida encontrada.</p>
-              <p style={{ fontSize: '0.8rem', opacity: '0.6', marginTop: '4px' }}>Adicione figurinhas repetidas entrando na página de qualquer seleção.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {listaRepetidasAgrupadas.map(pais => (
-                <div key={pais.id} style={{ background: 'var(--bg-card)', borderRadius: '12px', padding: '16px', border: '1px solid #2e2e36' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '6px' }}>
-                    <img 
-                      src={`https://flagcdn.com/w40/${pais.code}.png`} 
-                      alt={`Bandeira de ${pais.nome}`}
-                      style={{ width: '28px', height: 'auto', borderRadius: '3px' }}
-                    />
-                    <span style={{ fontSize: '1.1rem', fontWeight: '800' }}>{pais.nome.replace(' - ', '')}</span>
-                    <span style={{ fontSize: '0.8rem', fontWeight: '700', opacity: '0.4' }}>({pais.id})</span>
+          {obterDadosRepetidas().map(pais => (
+            <div key={pais.id} style={{ background: '#1f1f2e', padding: '16px', borderRadius: '12px', marginBottom: '12px' }}>
+              <h4>{pais.nome.replace(' - ', '')}</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                {pais.itens.map(item => (
+                  <div key={item.num} style={{ background: '#111', padding: '6px', borderRadius: '6px', textAlign: 'center' }}>
+                    <span>Nº {item.num}</span><br/><small style={{ color: '#3b82f6' }}>{item.qtd}x</small>
                   </div>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                    {pais.itens.map(item => (
-                      <div 
-                        key={item.num} 
-                        style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '8px 4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(59,130,246,0.2)' }}
-                      >
-                        <span style={{ fontSize: '1rem', fontWeight: '800' }}>Nº {item.num}</span>
-                        <span style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: '800', marginTop: '2px', background: 'rgba(59,130,246,0.15)', padding: '1px 6px', borderRadius: '4px' }}>
-                          {item.qtd}x rep
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          )}
+          ))}
         </div>
       </div>
     );
@@ -561,43 +436,25 @@ export default function App() {
   if (telaAtual === 'comunidade') {
     return (
       <div>
-        <header>
-          <div className="header-container">
-            <button onClick={() => setTelaAtual('lista')} className="btn-logout" style={{ borderColor: 'var(--cor-primaria)', color: 'var(--cor-primaria)' }}>
-              <i className="fa-solid fa-arrow-left"></i> Voltar para o Álbum
-            </button>
-          </div>
-        </header>
-
+        <header><div className="header-container"><button onClick={() => setTelaAtual('lista')} className="btn-logout">Voltar para o Álbum</button></div></header>
         <div className="main-container" style={{ maxWidth: '600px' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '4px' }}>👥 Repetidas da Comunidade</h2>
-          <p style={{ fontSize: '0.85rem', opacity: '0.6', marginBottom: '20px' }}>Toque no botão azul ao lado da figurinha de um amigo para sinalizar interesse!</p>
-
+          <h2>👥 Painel de Trocas da Comunidade</h2>
           {albunsAlheios.length === 0 ? (
-            <p style={{ opacity: 0.5, textAlign: 'center', marginTop: '20px' }}>Nenhum outro amigo compartilhou figurinhas no app ainda.</p>
+            <p style={{ opacity: 0.5, textAlign: 'center' }}>Nenhum outro amigo compartilhou figurinhas ainda.</p>
           ) : (
             albunsAlheios.map((amigo) => {
               const repDoAmigo = obterDadosRepetidas(amigo.album);
               if (repDoAmigo.length === 0) return null;
-
               return (
-                <div key={amigo.uid} style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '16px', marginBottom: '20px', border: '1px solid #333' }}>
-                  <h3 style={{ margin: '0 0 12px 0', color: '#8b5cf6', fontSize: '1.2rem' }}>
-                    <i className="fa-solid fa-user-tag"></i> Álbum de {amigo.nomeDono}
-                  </h3>
-
+                <div key={amigo.uid} style={{ background: '#1f1f2e', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
+                  <h3 style={{ color: '#8b5cf6', margin: '0 0 12px 0' }}>📦 Álbum de {amigo.nomeDono}</h3>
                   {repDoAmigo.map(pais => (
-                    <div key={pais.id} style={{ marginBottom: '12px', background: 'rgba(0,0,0,0.15)', padding: '10px', borderRadius: '8px' }}>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{pais.nome.replace(' - ', '')} ({pais.id}):</span>
+                    <div key={pais.id} style={{ marginBottom: '10px', background: '#111', padding: '10px', borderRadius: '8px' }}>
+                      <span><b>{pais.nome.replace(' - ', '')}</b>:</span>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
                         {pais.itens.map(item => (
-                          <button
-                            key={item.num}
-                            onClick={() => sinalizarInteresse(amigo.uid, amigo.nomeDono, pais.id, item.num)}
-                            style={{ background: '#1e1b4b', border: '1px solid #4338ca', color: '#fff', padding: '6px 10px', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                          >
-                            <span>Nº {item.num} ({item.qtd}x)</span>
-                            <i className="fa-solid fa-hand-point-up" style={{ color: '#6366f1' }}></i>
+                          <button key={item.num} onClick={() => sinalizarInteresse(amigo.uid, amigo.nomeDono, pais.id, item.num)} style={{ background: '#1e1b4b', border: '1px solid #4338ca', color: '#fff', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer' }}>
+                            Nº {item.num} ({item.qtd}x) 🤝 Pedir
                           </button>
                         ))}
                       </div>
