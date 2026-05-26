@@ -70,7 +70,7 @@ const listaPaises = [
   { id: 'TUN', nome: 'Tunísia', code: 'tn' },
   { id: 'ENG', nome: 'Inglaterra', code: 'gb-eng' },
   { id: 'PAN', nome: 'Panamá', code: 'pa' },
-  { id: 'CRO', stroke: 'Croácia', nome: 'Croácia', code: 'hr' },
+  { id: 'CRO', nome: 'Croácia', code: 'hr' },
   { id: 'GHA', nome: 'Gana', code: 'gh' }
 ];
 
@@ -281,7 +281,7 @@ export default function App() {
     );
   }
 
-  // --- TELA 1: LISTA TOTAL DAS SELEÇÕES ---
+  // --- TELA 1: LISTA TOTAL DAS SELEÇÕES DIRETA ---
   if (telaAtual === 'lista') {
     return (
       <div>
