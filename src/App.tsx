@@ -24,55 +24,57 @@ const provider = new GoogleAuthProvider();
 // 2. LISTA OFICIAL DE SELEÇÕES (48 PAÍSES)
 // ==========================================
 const listaPaises = [
-  { id: 'MEX', nome: ' - México', code: 'mx' },
-  { id: 'RSA', nome: ' - África do Sul', code: 'za' },
-  { id: 'KOR', nome: ' - Coreia do Sul', code: 'kr' },
-  { id: 'CZE', nome: ' - República Tcheca', code: 'cz' },
-  { id: 'CAN', nome: ' - Canadá', code: 'ca' },
-  { id: 'BIH', nome: ' - Bósnia e Herzegovina', code: 'ba' },
-  { id: 'QAT', nome: ' - Catar', code: 'qa' },
-  { id: 'SUI', nome: ' - Suíça', code: 'ch' },
-  { id: 'BRA', nome: ' - Brasil', code: 'br' },
-  { id: 'MAR', nome: ' - Marrocos', code: 'ma' },
-  { id: 'HAI', nome: ' - Haiti', code: 'ht' },
-  { id: 'SCO', nome: ' - Escócia', code: 'gb-sct' },
-  { id: 'USA', nome: ' - Estados Unidos', code: 'us' },
-  { id: 'PAR', nome: ' - Paraguai', code: 'py' },
-  { id: 'AUS', nome: ' - Austrália', code: 'au' },
-  { id: 'TUR', nome: ' - Turquia', code: 'tr' },
-  { id: 'GER', nome: ' - Alemanha', code: 'de' },
-  { id: 'CUW', nome: ' - Curaçao', code: 'cw' },
-  { id: 'CIV', nome: ' - Costa do Marfim', code: 'ci' },
-  { id: 'ECU', nome: ' - Equador', code: 'ec' },
-  { id: 'NED', nome: ' - Holanda', code: 'nl' },
-  { id: 'JPN', nome: ' - Japão', code: 'jp' },
-  { id: 'SWE', nome: ' - Suécia', code: 'se' },
-  { id: 'BEL', nome: ' - Bélgica', code: 'be' },
-  { id: 'EGY', nome: ' - Egito', code: 'eg' },
-  { id: 'IRN', nome: ' - Irã', code: 'ir' },
-  { id: 'NZL', nome: ' - Nova Zelândia', code: 'nz' },
-  { id: 'ESP', nome: ' - Espanha', code: 'es' },
-  { id: 'CPV', nome: ' - Cabo Verde', code: 'cv' },
-  { id: 'KSA', nome: ' - Arábia Saudita', code: 'sa' },
-  { id: 'URU', nome: ' - Uruguai', code: 'uy' },
-  { id: 'FRA', nome: ' - França', code: 'fr' },
-  { id: 'SEN', nome: ' - Senegal', code: 'sn' },
-  { id: 'IRQ', nome: ' - Iraque', code: 'iq' },
-  { id: 'NOR', nome: ' - Noruega', code: 'no' },
-  { id: 'ARG', nome: ' - Argentina', code: 'ar' },
-  { id: 'ALG', nome: ' - Argélia', code: 'dz' },
-  { id: 'AUT', nome: ' - Áustria', code: 'at' },
-  { id: 'JOR', nome: ' - Jordânia', code: 'jo' },
-  { id: 'POR', nome: ' - Portugal', code: 'pt' },
-  { id: 'COD', nome: ' - R. D. do Congo', code: 'cd' },
-  { id: 'UZB', nome: ' - Uzbequistão', code: 'uz' },
-  { id: 'COL', nome: ' - Colômbia', code: 'co' },
-  { id: 'TUN', nome: ' - Tunísia', code: 'tn' },
-  { id: 'ENG', nome: ' - Inglaterra', code: 'gb-eng' },
-  { id: 'PAN', nome: ' - Panamá', code: 'pa' },
-  { id: 'CRO', nome: ' - Croácia', code: 'hr' },
-  { id: 'GHA', nome: ' - Gana', code: 'gh' }
+  { id: 'MEX', nome: 'México', code: 'mx' },
+  { id: 'RSA', nome: 'África do Sul', code: 'za' },
+  { id: 'KOR', nome: 'Coreia do Sul', code: 'kr' },
+  { id: 'CZE', nome: 'República Tcheca', code: 'cz' },
+  { id: 'CAN', nome: 'Canadá', code: 'ca' },
+  { id: 'BIH', nome: 'Bósnia e Herzegovina', code: 'ba' },
+  { id: 'QAT', nome: 'Catar', code: 'qa' },
+  { id: 'SUI', nome: 'Suíça', code: 'ch' },
+  { id: 'BRA', nome: 'Brasil', code: 'br' },
+  { id: 'MAR', nome: 'Marrocos', code: 'ma' },
+  { id: 'HAI', nome: 'Haiti', code: 'ht' },
+  { id: 'SCO', nome: 'Escócia', code: 'gb-sct' },
+  { id: 'USA', nome: 'Estados Unidos', code: 'us' },
+  { id: 'PAR', nome: 'Paraguai', code: 'py' },
+  { id: 'AUS', nome: 'Austrália', code: 'au' },
+  { id: 'TUR', nome: 'Turquia', code: 'tr' },
+  { id: 'GER', nome: 'Alemanha', code: 'de' },
+  { id: 'CUW', nome: 'Curaçao', code: 'cw' },
+  { id: 'CIV', nome: 'Costa do Marfim', code: 'ci' },
+  { id: 'ECU', nome: 'Equador', code: 'ec' },
+  { id: 'NED', nome: 'Holanda', code: 'nl' },
+  { id: 'JPN', nome: 'Japão', code: 'jp' },
+  { id: 'SWE', nome: 'Suécia', code: 'se' },
+  { id: 'BEL', nome: 'Bélgica', code: 'be' },
+  { id: 'EGY', nome: 'Egito', code: 'eg' },
+  { id: 'IRN', nome: 'Irã', code: 'ir' },
+  { id: 'NZL', nome: 'Nova Zelândia', code: 'nz' },
+  { id: 'ESP', nome: 'Espanha', code: 'es' },
+  { id: 'CPV', nome: 'Cabo Verde', code: 'cv' },
+  { id: 'KSA', nome: 'Arábia Saudita', code: 'sa' },
+  { id: 'URU', nome: 'Uruguai', code: 'uy' },
+  { id: 'FRA', nome: 'França', code: 'fr' },
+  { id: 'SEN', nome: 'Senegal', code: 'sn' },
+  { id: 'IRQ', nome: 'Iraque', code: 'iq' },
+  { id: 'NOR', nome: 'Noruega', code: 'no' },
+  { id: 'ARG', nome: 'Argentina', code: 'ar' },
+  { id: 'ALG', nome: 'Argélia', code: 'dz' },
+  { id: 'AUT', nome: 'Áustria', code: 'at' },
+  { id: 'JOR', nome: 'Jordânia', code: 'jo' },
+  { id: 'POR', nome: 'Portugal', code: 'pt' },
+  { id: 'COD', nome: 'R. D. do Congo', code: 'cd' },
+  { id: 'UZB', nome: 'Uzbequistão', code: 'uz' },
+  { id: 'COL', nome: 'Colômbia', code: 'co' },
+  { id: 'TUN', nome: 'Tunísia', code: 'tn' },
+  { id: 'ENG', nome: 'Inglaterra', code: 'gb-eng' },
+  { id: 'PAN', nome: 'Panamá', code: 'pa' },
+  { id: 'CRO', nome: 'Croácia', code: 'hr' },
+  { id: 'GHA', nome: 'Gana', code: 'gh' }
 ];
+
+const vinteNumeros = Array.from({ length: 20 }, (_, i) => i + 1);
 
 // ==========================================
 // 3. CÓDIGO DA INTERFACE E LÓGICA DO APP
@@ -80,7 +82,6 @@ const listaPaises = [
 export default function App() {
   const [user, setUser] = useState(null);
   const [telaAtual, setTelaAtual] = useState('lista'); 
-  const [paisAberto, setPaisAberto] = useState(null);
   const [meuAlbum, setMeuAlbum] = useState({});
   const [albunsAlheios, setAlbunsAlheios] = useState([]);
   const [notificacoes, setNotificacoes] = useState([]);
@@ -97,7 +98,6 @@ export default function App() {
     return () => desligarMonitor();
   }, []);
 
-  // Monitorar o álbum pessoal no Firestore
   useEffect(() => {
     if (!user) return;
     const documentoDoUsuario = doc(db, "usuarios_figurinhas", user.uid);
@@ -107,7 +107,6 @@ export default function App() {
     return () => escutarBanco();
   }, [user]);
 
-  // ESCUTAR REQUISIÇÕES DE TROCA DE VERDADE (Tempo Real)
   useEffect(() => {
     if (!user) return;
     const q = query(
@@ -127,7 +126,6 @@ export default function App() {
     return () => escutarPedidos();
   }, [user]);
 
-  // Carregar os álbuns dos outros usuários para a aba de trocas
   const carregarAlbunsDoApp = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "compartilhamentos_publicos"));
@@ -172,7 +170,7 @@ export default function App() {
       const qtdRep = Number(meuAlbum[`${paisId}-${i}-rep`]) || 0;
       repetidas += qtdRep;
     }
-    return { tenho, faltam: 20 - tenho, repetidas };
+    return { tenho, repetidas };
   };
 
   const obterDadosRepetidas = (albumData = meuAlbum) => {
@@ -189,8 +187,6 @@ export default function App() {
   const salvarNoBancoCompleto = async (novoAlbum) => {
     if (!user) return;
     await setDoc(doc(db, "usuarios_figurinhas", user.uid), novoAlbum);
-    
-    // Atualiza o espelho público
     await setDoc(doc(db, "compartilhamentos_publicos", user.uid), {
       nomeDono: user.displayName || "Amigo",
       album: novoAlbum,
@@ -216,7 +212,6 @@ export default function App() {
     await salvarNoBancoCompleto(albumAtualizado);
   };
 
-  // SINALIZAR INTERESSE CRIANDO REGISTRO DE TROCA REAL
   const sinalizarInteresse = async (donoUid, donoNome, itemPais, itemNum) => {
     try {
       await addDoc(collection(db, "pedidos_trocas"), {
@@ -231,30 +226,25 @@ export default function App() {
       });
       alert(`Pedido enviado! O ${donoNome} recebeu o alerta no app para te passar a figurinha ${itemPais} ${itemNum}.`);
     } catch(e) {
-      console.error("Erro ao pedir troca: ", e);
+      console.error(e);
     }
   };
 
-  // GERENCIAR PEDIDOS RECEBIDOS (ACEITAR / RECUSAR)
   const responderTroca = async (pedidoId, acao, paisId, numero) => {
     try {
       const pedidoRef = doc(db, "pedidos_trocas", pedidoId);
-      
       if (acao === 'aceitar') {
         const apiKey = `${paisId}-${numero}-rep`;
         const qtdAtual = Number(meuAlbum[apiKey]) || 0;
-        
         if (qtdAtual <= 0) {
-          alert("Você não tem mais essa figurinha repetida em estoque!");
+          alert("Você não tem mais essa figurinha repetida!");
           await updateDoc(pedidoRef, { status: "recusado_sem_estoque" });
           return;
         }
-
-        // Subtrai 1 das repetidas automaticamente
         const albumAtualizado = { ...meuAlbum, [apiKey]: qtdAtual - 1 };
         await salvarNoBancoCompleto(albumAtualizado);
         await updateDoc(pedidoRef, { status: "aceito" });
-        alert("Troca aceita! A figurinha já foi descontada do seu banco de repetidas.");
+        alert("Troca aceita!");
       } else {
         await updateDoc(pedidoRef, { status: "recusado" });
         alert("Troca recusada.");
@@ -264,7 +254,6 @@ export default function App() {
     }
   };
 
-  // LINK WHATSAPP
   const compartilharWhatsApp = () => {
     const repetidas = obterDadosRepetidas();
     if (repetidas.length === 0) {
@@ -274,7 +263,7 @@ export default function App() {
     let texto = `👋 Minhas REPETIDAS do Álbum da Copa 2026:\n\n`;
     repetidas.forEach(p => {
       const listaNums = p.itens.map(i => `${i.num}(${i.qtd}x)`).join(', ');
-      texto += `📌 *${p.nome.replace(' - ', '')}* [${p.id}]: ${listaNums}\n`;
+      texto += `📌 *${p.nome}* [${p.id}]: ${listaNums}\n`;
     });
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
   };
@@ -292,7 +281,7 @@ export default function App() {
     );
   }
 
-  // --- TELA 1: LISTA INICIAL DE SELEÇÕES ---
+  // --- TELA 1: LISTA TOTAL DAS SELEÇÕES COM BOTÕES DE 1 A 20 DIRETO ---
   if (telaAtual === 'lista') {
     return (
       <div>
@@ -305,17 +294,17 @@ export default function App() {
 
         <div className="main-container" style={{ maxWidth: '1200px' }}>
           
-          {/* PAINEL DE SINALIZAÇÕES ATIVAS INTERATIVO */}
+          {/* Alertas de Trocas Pendentes */}
           {notificacoes.length > 0 && (
-            <div style={{ background: '#111827', border: '2px solid #10b981', borderRadius: '14px', padding: '16px', marginBottom: '24px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
-              <h4 style={{ color: '#10b981', margin: '0 0 12px 0', fontSize: '1rem', fontWeight: 'bold' }}>📢 Solicitações de Troca Pendentes:</h4>
+            <div style={{ background: '#111827', border: '2px solid #10b981', borderRadius: '14px', padding: '16px', marginBottom: '24px' }}>
+              <h4 style={{ color: '#10b981', margin: '0 0 12px 0', fontWeight: 'bold' }}>📢 Solicitações de Troca Pendentes:</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {notificacoes.map((pedido) => (
-                  <div key={pedido.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div key={pedido.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
                     <span style={{ fontSize: '0.85rem' }}>👉 <b>{pedido.deNome}</b> quer a sua figurinha <b>{pedido.paisId} - Nº {pedido.numero}</b></span>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => responderTroca(pedido.id, 'aceitar', pedido.paisId, pedido.numero)} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Aceitar</button>
-                      <button onClick={() => responderTroca(pedido.id, 'recusar', pedido.paisId, pedido.numero)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Recusar</button>
+                      <button onClick={() => responderTroca(pedido.id, 'aceitar', pedido.paisId, pedido.numero)} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Aceitar</button>
+                      <button onClick={() => responderTroca(pedido.id, 'recusar', pedido.paisId, pedido.numero)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Recusar</button>
                     </div>
                   </div>
                 ))}
@@ -335,7 +324,7 @@ export default function App() {
           </div>
 
           {/* Menu de Controle */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '32px' }}>
             <button onClick={() => setTelaAtual('repetidas')} className="btn btn-primary" style={{ background: '#3b82f6', padding: '14px', borderRadius: '12px', fontWeight: '700' }}>
               🔄 Minhas Repetidas ({totalRepetidasGeral})
             </button>
@@ -344,59 +333,54 @@ export default function App() {
             </button>
           </div>
 
-          <div className="grid-paises">
+          {/* LISTAGEM ÚNICA COM ROLAGEM */}
+          <h2 className="text-gray-400 font-bold text-xs tracking-wider mb-6 uppercase">Álbum Completo (Marque direto nas tabelas abaixo)</h2>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             {listaPaises.map((pais) => {
               const { tenho, repetidas } = contarFigurinhasDoPais(pais.id);
-              const completo = tenho === 20;
-              const porcentagemPais = (tenho / 20) * 100;
               return (
-                <div key={pais.id} onClick={() => { setPaisAberto(pais); setTelaAtual('pais'); }} className={`pais-card ${completo ? 'completo' : ''}`}>
-                  <div className="pais-info">
-                    <img src={`https://flagcdn.com/w40/${pais.code}.png`} style={{ width: '32px', borderRadius: '4px' }}/>
-                    <div>
-                      <span className="pais-nome">{pais.nome.replace(' - ', '')}</span>
-                      <span style={{ fontSize: '10px', opacity: 0.4 }}>{pais.id}</span>
+                <div key={pais.id} style={{ background: '#1f1f2e', borderRadius: '16px', padding: '20px', border: '1px solid #2e2e36' }}>
+                  
+                  {/* Cabeçalho da seleção com sigla bem afastada */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <img src={`https://flagcdn.com/w40/${pais.code}.png`} style={{ width: '36px', borderRadius: '4px', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }} alt={pais.nome}/>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '1.3rem', fontWeight: '800', color: '#fff' }}>{pais.nome}</span>
+                        {/* Margem superior grande para descolar a sigla do nome */}
+                        <span style={{ fontSize: '0.8rem', opacity: '0.5', fontWeight: '700', textTransform: 'uppercase', marginTop: '4px', letterSpacing: '1px' }}>ID do País: {pais.id}</span>
+                      </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <span className="pais-badge">{tenho}/20</span>
-                      {repetidas > 0 && <span style={{ fontSize: '10px', color: '#3b82f6', display: 'block' }}>+{repetidas} rep</span>}
+                      <span style={{ background: tengo === 20 ? '#10b981' : '#2a2a3a', padding: '6px 12px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold' }}>{tenho} / 20</span>
+                      {repetidas > 0 && <span style={{ fontSize: '11px', color: '#3b82f6', display: 'block', marginTop: '6px', fontWeight: 'bold' }}>+{repetidas} repetidas</span>}
                     </div>
                   </div>
-                  <div className="mini-progress-bg"><div className="mini-progress-bar" style={{ width: `${porcentagemPais}%` }}></div></div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  // --- TELA 2: LISTA DE NÚMEROS DE CADA PAÍS ---
-  if (telaAtual === 'pais' && paisAberto) {
-    const { tenho: localTenho, faltam: localFaltam, repetidas: localRepetidas } = contarFigurinhasDoPais(paisAberto.id);
-    return (
-      <div>
-        <header><div className="header-container"><button onClick={() => setTelaAtual('lista')} className="btn-logout">Voltar para a Lista</button></div></header>
-        <div className="main-container" style={{ maxWidth: '500px' }}>
-          <div className="pais-card completo" style={{ padding: '20px', marginBottom: '20px' }}>
-            <h2>{paisAberto.nome.replace(' - ', '')}</h2>
-            <span style={{ color: '#10b981' }}>Tenho: {localTenho}</span> | <span style={{ color: '#ef4444' }}>Faltam: {localFaltam}</span>
-          </div>
-          <div className="grid-figurinhas" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-            {Array.from({ length: 20 }, (_, i) => i + 1).map((num) => {
-              const marcado = meuAlbum[`${paisAberto.id}-${num}`] === true;
-              const qtdRepetida = Number(meuAlbum[`${paisAberto.id}-${num}-rep`]) || 0;
-              return (
-                <div key={num} style={{ background: '#1f1f2e', padding: '10px', borderRadius: '12px', border: marcado ? '2px solid #10b981' : '1px solid #333' }}>
-                  <button onClick={() => clicarNoNumero(paisAberto.id, num)} style={{ width: '100%', background: marcado ? '#10b981' : 'transparent', color: '#fff', border: 'none', padding: '8px', cursor: 'pointer' }}>
-                    {num}
-                  </button>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-                    <button onClick={() => alterarRepetida(paisAberto.id, num, 'menos')} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer' }}>-</button>
-                    <span>{qtdRepetida} rep</span>
-                    <button onClick={() => alterarRepetida(paisAberto.id, num, 'mais')} style={{ color: '#10b981', border: 'none', background: 'none', cursor: 'pointer' }}>+</button>
+                  {/* Grid de Figurinhas de 1 a 20 Responsivo */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px' }}>
+                    {vinteNumeros.map((num) => {
+                      const marcado = meuAlbum[`${pais.id}-${num}`] === true;
+                      const qtdRepetida = Number(meuAlbum[`${pais.id}-${num}-rep`]) || 0;
+                      return (
+                        <div key={num} style={{ background: '#14141f', padding: '8px', borderRadius: '10px', border: marcado ? '2px solid #10b981' : '1px solid #2a2a3a', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <button 
+                            onClick={() => clicarNoNumero(pais.id, num)} 
+                            style={{ width: '100%', background: marcado ? '#10b981' : 'transparent', color: '#fff', border: 'none', padding: '6px 0', cursor: 'pointer', borderRadius: '6px', fontWeight: 'bold', fontSize: '1rem' }}
+                          >
+                            {num}
+                          </button>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '6px' }}>
+                            <button onClick={() => alterarRepetida(pais.id, num, 'menos')} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem' }}>-</button>
+                            <span style={{ fontSize: '0.75rem', color: qtdRepetida > 0 ? '#3b82f6' : '#888', fontWeight: 'bold' }}>{qtdRepetida}r</span>
+                            <button onClick={() => alterarRepetida(pais.id, num, 'mais')} style={{ color: '#10b981', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem' }}>+</button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
+
                 </div>
               );
             })}
@@ -417,7 +401,7 @@ export default function App() {
           </button>
           {obterDadosRepetidas().map(pais => (
             <div key={pais.id} style={{ background: '#1f1f2e', padding: '16px', borderRadius: '12px', marginBottom: '12px' }}>
-              <h4>{pais.nome.replace(' - ', '')}</h4>
+              <h4>{pais.nome}</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                 {pais.itens.map(item => (
                   <div key={item.num} style={{ background: '#111', padding: '6px', borderRadius: '6px', textAlign: 'center' }}>
@@ -450,7 +434,7 @@ export default function App() {
                   <h3 style={{ color: '#8b5cf6', margin: '0 0 12px 0' }}>📦 Álbum de {amigo.nomeDono}</h3>
                   {repDoAmigo.map(pais => (
                     <div key={pais.id} style={{ marginBottom: '10px', background: '#111', padding: '10px', borderRadius: '8px' }}>
-                      <span><b>{pais.nome.replace(' - ', '')}</b>:</span>
+                      <span><b>{pais.nome}</b>:</span>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
                         {pais.itens.map(item => (
                           <button key={item.num} onClick={() => sinalizarInteresse(amigo.uid, amigo.nomeDono, pais.id, item.num)} style={{ background: '#1e1b4b', border: '1px solid #4338ca', color: '#fff', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer' }}>
