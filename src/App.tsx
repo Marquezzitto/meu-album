@@ -317,7 +317,7 @@ export default function App() {
     return (
       <div id="tela-login">
         <div className="login-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px' }}>
-          <img src="assets/album.png" alt="Álbum" style={{ width: '130px', borderRadius: '12px', marginBottom: '16px' }}/>
+          <img src="src/assets/album.png" alt="Álbum" style={{ width: '130px', borderRadius: '12px', marginBottom: '16px' }}/>
           <h1>Registro de Figurinhas 2026</h1>
           <p style={{ fontSize: '0.85rem', opacity: 0.7, textAlign: 'center', marginBottom: '16px' }}>
             {idAnfitriao ? "Você recebeu um convite de troca! Entre para ver." : "Organize e gerencie suas trocas em tempo real."}
