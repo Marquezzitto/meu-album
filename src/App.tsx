@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, onSnapshot, setDoc, collection, getDocs, addDoc, updateDoc, query, where, getDoc } from "firebase/firestore";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
-
+import imagemAlbum from './assets/album.png'; // Garanta que o caminho está certinho de onde o App.tsx está
 // ==========================================
 // 1. CONFIGURAÇÃO DO BANCO DE DADOS (FIREBASE)
 // ==========================================
