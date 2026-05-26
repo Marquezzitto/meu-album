@@ -70,7 +70,7 @@ const listaPaises = [
   { id: 'TUN', nome: 'Tunísia', code: 'tn' },
   { id: 'ENG', nome: 'Inglaterra', code: 'gb-eng' },
   { id: 'PAN', nome: 'Panamá', code: 'pa' },
-  { id: 'CRO', nome: 'Croácia', code: 'hr' },
+  { id: 'CRO', stroke: 'Croácia', nome: 'Croácia', code: 'hr' },
   { id: 'GHA', nome: 'Gana', code: 'gh' }
 ];
 
@@ -281,7 +281,7 @@ export default function App() {
     );
   }
 
-  // --- TELA 1: LISTA TOTAL DAS SELEÇÕES COM BOTÕES DE 1 A 20 DIRETO ---
+  // --- TELA 1: LISTA TOTAL DAS SELEÇÕES ---
   if (telaAtual === 'lista') {
     return (
       <div>
@@ -348,8 +348,7 @@ export default function App() {
                       <img src={`https://flagcdn.com/w40/${pais.code}.png`} style={{ width: '36px', borderRadius: '4px', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }} alt={pais.nome}/>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <span style={{ fontSize: '1.3rem', fontWeight: '800', color: '#fff' }}>{pais.nome}</span>
-                        {/* Margem superior grande para descolar a sigla do nome */}
-                        <span style={{ fontSize: '0.8rem', opacity: '0.5', fontWeight: '700', textTransform: 'uppercase', marginTop: '4px', letterSpacing: '1px' }}>ID do País: {pais.id}</span>
+                        <span style={{ fontSize: '0.8rem', opacity: '0.5', fontWeight: '700', textTransform: 'uppercase', marginTop: '6px', letterSpacing: '1px' }}>ID do País: {pais.id}</span>
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -358,7 +357,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Grid de Figurinhas de 1 a 20 Responsivo */}
+                  {/* Grid de Figurinhas de 1 a 20 */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px' }}>
                     {vinteNumeros.map((num) => {
                       const marcado = meuAlbum[`${pais.id}-${num}`] === true;
