@@ -140,6 +140,32 @@ export default function App() {
     buscarAnfitriao();
   }, [user, idAnfitriao]);
 
+  // Monitora se os pedidos que EU fiz foram aceitos por alguém para me alertar em tempo real
+  useEffect(() => {
+    if (!user) return;
+    const qAvisos = query(
+      collection(db, "pedidos_trocas"),
+      where("deUid", "==", user.uid),
+      where("status", "==", "aceito")
+    );
+
+    const escutarAvisosReversos = onSnapshot(qAvisos, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added" || change.type === "modified") {
+          const dadosPedido = change.doc.data();
+          // Alerta o amigo que a figurinha entrou no álbum dele
+          alert(`🎉 Sucesso! O pedido da figurinha ${dadosPedido.paisId} Nº ${dadosPedido.numero} foi aceito e ela já foi colada automaticamente no seu álbum!`);
+          
+          // Limpa ou atualiza o status do aviso para não ficar repetindo o alert infinitamente
+          const pedidoRef = doc(db, "pedidos_trocas", change.doc.id);
+          updateDoc(pedidoRef, { status: "arquivado_sucesso" });
+        }
+      });
+    });
+
+    return () => escutarAvisosReversos();
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
     const q = query(
@@ -263,27 +289,49 @@ export default function App() {
     }
   };
 
-  const responderTroca = async (pedidoId, acao, paisId, numero) => {
+  const responderTroca = async (pedidoId, acao, paisId, numero, deUid) => {
     try {
       const pedidoRef = doc(db, "pedidos_trocas", pedidoId);
+      
       if (acao === 'aceitar') {
         const apiKey = `${paisId}-${numero}-rep`;
         const qtdAtual = Number(meuAlbum[apiKey]) || 0;
+        
         if (qtdAtual <= 0) {
-          alert("Você não tem mais essa figurinha repetida!");
+          alert("Você não tem mais essa figurinha repetida no seu estoque!");
           await updateDoc(pedidoRef, { status: "recusado_sem_estoque" });
           return;
         }
-        const albumAtualizado = { ...meuAlbum, [apiKey]: qtdAtual - 1 };
-        await salvarNoBancoCompleto(albumAtualizado);
+
+        // 1. BAIXA NO SEU ESTOQUE (Tira de você)
+        const meuAlbumAtualizado = { ...meuAlbum, [apiKey]: qtdAtual - 1 };
+        await salvarNoBancoCompleto(meuAlbumAtualizado);
+
+        // 2. ADIÇÃO NO ÁLBUM DO AMIGO (Cola para ele)
+        const amigoAlbumRef = doc(db, "usuarios_figurinhas", deUid);
+        const amigoCompartilhadoRef = doc(db, "compartilhamentos_publicos", deUid);
+        
+        const snapAmigo = await getDoc(amigoAlbumRef);
+        let albumAmigoDados = snapAmigo.exists() ? snapAmigo.data() : {};
+        
+        const chaveFigurinhaComum = `${paisId}-${numero}`;
+        albumAmigoDados[chaveFigurinhaComum] = true;
+
+        await setDoc(amigoAlbumRef, albumAmigoDados);
+        await updateDoc(amigoCompartilhadoRef, {
+          album: albumAmigoDados,
+          atualizadoEm: new Date().toISOString()
+        });
+
+        // 3. ATUALIZA O STATUS DO PEDIDO PARA DISPARAR O AVISO NO OUTRO APP
         await updateDoc(pedidoRef, { status: "aceito" });
-        alert("Troca aceita!");
+        alert(`✔ Troca processada! A figurinha ${paisId} Nº ${numero} foi retirada das suas repetidas e colada no álbum do seu amigo.`);
       } else {
         await updateDoc(pedidoRef, { status: "recusado" });
         alert("Troca recusada.");
       }
     } catch(e) {
-      console.error(e);
+      console.error("Erro ao processar troca bivalente: ", e);
     }
   };
 
@@ -393,8 +441,8 @@ export default function App() {
                   <div key={pedido.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
                     <span style={{ fontSize: '0.85rem' }}>👉 <b>{pedido.deNome}</b> quer: <b>{pedido.paisId} - Nº {pedido.numero}</b></span>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => responderTroca(pedido.id, 'aceitar', pedido.paisId, pedido.numero)} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Aceitar</button>
-                      <button onClick={() => responderTroca(pedido.id, 'recusar', pedido.paisId, pedido.numero)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Recusar</button>
+                      <button onClick={() => responderTroca(pedido.id, 'aceitar', pedido.paisId, pedido.numero, pedido.deUid)} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Aceitar</button>
+                      <button onClick={() => responderTroca(pedido.id, 'recusar', pedido.paisId, pedido.numero, pedido.deUid)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Recusar</button>
                     </div>
                   </div>
                 ))}
@@ -408,7 +456,7 @@ export default function App() {
             <div className="progress-bar-container"><div className="progress-bar-fill" style={{ width: `${porcentagemProgresso}%` }}></div></div>
             <div className="cards-stats">
               <div className="stat-card total"><div className="label">Total</div><div className="value">{totalFigurinhasNoAlbum}</div></div>
-              <div className="stat-card tengo"><div className="label">Tenho</div><div className="value">{quantasEuTenhoGeral}</div></div>
+              <div className="stat-card tenho"><div className="label">Tenho</div><div className="value">{quantasEuTenhoGeral}</div></div>
               <div className="stat-card faltam"><div className="label">Faltam</div><div className="value">{quantasFaltamGeral}</div></div>
             </div>
           </div>
@@ -486,7 +534,7 @@ export default function App() {
         <div className="main-container" style={{ maxWidth: '500px' }}>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-            <button onClick={compartilharWhatsApp} style={{ width: '100%', background: '#25D366', color: '#fff', padding: '14px', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
+            <button onClick={compartirWhatsApp} style={{ width: '100%', background: '#25D366', color: '#fff', padding: '14px', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
               Compartilhar no WhatsApp com Link
             </button>
             <button onClick={copiarLinkDireto} style={{ width: '100%', background: '#3b82f6', color: '#fff', padding: '14px', borderRadius: '12px', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
