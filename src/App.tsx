@@ -86,16 +86,17 @@ export default function App() {
   const [albunsAlheios, setAlbunsAlheios] = useState([]);
   const [notificacoes, setNotificacoes] = useState([]);
   
-  // Estados novos para gerenciar a mecânica de convites por link
   const [idAnfitriao, setIdAnfitriao] = useState(null);
   const [dadosAnfitriao, setDadosAnfitriao] = useState(null);
 
-  // Captura se o usuário entrou usando um link de convite (?convite=ID)
+  // Captura apenas o parâmetro da URL de forma segura
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const idConvite = params.get('convite');
-    if (idConvite) {
-      setIdAnfitriao(idConvite);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const idConvite = params.get('convite');
+      if (idConvite) {
+        setIdAnfitriao(idConvite);
+      }
     }
   }, []);
 
@@ -106,6 +107,7 @@ export default function App() {
         setMeuAlbum({});
         setAlbunsAlheios([]);
         setNotificacoes([]);
+        setDadosAnfitriao(null);
       }
     });
     return () => desligarMonitor();
@@ -120,16 +122,20 @@ export default function App() {
     return () => escutarBanco();
   }, [user]);
 
-  // Se houver um id de convite no link, busca os dados daquela pessoa pública na hora
+  // Busca os dados do convite de forma protegida APÓS o login existir
   useEffect(() => {
     if (!user || !idAnfitriao) return;
     
     const buscarAnfitriao = async () => {
-      const docRef = doc(db, "compartilhamentos_publicos", idAnfitriao);
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        setDadosAnfitriao(snap.data());
-        setTelaAtual('visualizar_convite'); // Desvia o usuário novo direto para o convite
+      try {
+        const docRef = doc(db, "compartilhamentos_publicos", idAnfitriao);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          setDadosAnfitriao(snap.data());
+          setTelaAtual('visualizar_convite');
+        }
+      } catch (err) {
+        console.error("Erro ao buscar dados do convite:", err);
       }
     };
     buscarAnfitriao();
@@ -201,7 +207,7 @@ export default function App() {
     return { tenho, repetidas };
   };
 
-  const obtenerDadosRepetidas = (albumData = meuAlbum) => {
+  const obterDadosRepetidas = (albumData = meuAlbum) => {
     return listaPaises.map(pais => {
       const itemsDoPais = [];
       for (let num = 1; num <= 20; num++) {
@@ -288,7 +294,6 @@ export default function App() {
       alert("Nenhuma repetida encontrada.");
       return;
     }
-    // Cria o link dinâmico usando a URL atual do site + o UID do usuário
     const linkConvite = `${window.location.origin}${window.location.pathname}?convite=${user.uid}`;
     
     let texto = `👋 Minhas REPETIDAS do Álbum da Copa 2026:\n\n`;
@@ -304,18 +309,18 @@ export default function App() {
   const copiarLinkDireto = () => {
     const linkConvite = `${window.location.origin}${window.location.pathname}?convite=${user.uid}`;
     navigator.clipboard.writeText(linkConvite);
-    alert("Link de convite pessoal copiado para a área de transferência! É só colar para os seus amigos.");
+    alert("Link de convite pessoal copiado!");
   };
 
   // --- TELA DE LOGIN ---
   if (!user) {
     return (
       <div id="tela-login">
-        <div className="login-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div className="login-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px' }}>
           <img src="assets/album.png" alt="Álbum" style={{ width: '130px', borderRadius: '12px', marginBottom: '16px' }}/>
           <h1>Registro de Figurinhas 2026</h1>
           <p style={{ fontSize: '0.85rem', opacity: 0.7, textAlign: 'center', marginBottom: '16px' }}>
-            {idAnfitriao ? "Você recebeu um convite de troca! Faça login para ver as repetidas." : "Organize e gerencie suas trocas em tempo real."}
+            {idAnfitriao ? "Você recebeu um convite de troca! Entre para ver." : "Organize e gerencie suas trocas em tempo real."}
           </p>
           <button onClick={() => signInWithPopup(auth, provider)} className="btn btn-primary">Entrar com Conta Google</button>
         </div>
@@ -323,7 +328,7 @@ export default function App() {
     );
   }
 
-  // --- TELA 5: TELA EXCLUSIVA DO LINK DE CONVITE (PARA QUEM ENTROU PELO LINK) ---
+  // --- TELA 5: TELA EXCLUSIVA DO LINK DE CONVITE ---
   if (telaAtual === 'visualizar_convite' && dadosAnfitriao) {
     const repDoAnfitriao = obterDadosRepetidas(dadosAnfitriao.album);
     return (
@@ -331,7 +336,7 @@ export default function App() {
         <header>
           <div className="header-container">
             <button onClick={() => setTelaAtual('lista')} className="btn-logout" style={{ borderColor: '#3b82f6', color: '#3b82f6' }}>
-              <i className="fa-solid fa-book-open"></i> Ir Para Meu Álbum Pessoal
+              Ir Para Meu Álbum Pessoal
             </button>
           </div>
         </header>
@@ -340,24 +345,21 @@ export default function App() {
           <div style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid #8b5cf6', borderRadius: '16px', padding: '20px', marginBottom: '24px', textAlign: 'center' }}>
             <h2>👋 Olá, {user.displayName}!</h2>
             <p style={{ fontSize: '0.9rem', opacity: '0.8', marginTop: '4px' }}>
-              Você entrou pelo link de convite do <b>{dadosAnfitriao.nomeDono}</b>.
-            </p>
-            <p style={{ fontSize: '0.8rem', color: '#8b5cf6', fontWeight: 'bold', marginTop: '6px' }}>
-              Escolha abaixo quais figurinhas repetidas dele você precisa e clique em Pedir!
+              Você está vendo as repetidas de <b>{dadosAnfitriao.nomeDono}</b>.
             </p>
           </div>
 
-          <h3 className="text-gray-400 font-bold text-xs tracking-wider mb-4 uppercase">Repetidas Disponíveis de {dadosAnfitriao.nomeDono}:</h3>
+          <h3 className="text-gray-400 font-bold text-xs tracking-wider mb-4 uppercase">Repetidas de {dadosAnfitriao.nomeDono}:</h3>
           
           {repDoAnfitriao.length === 0 ? (
-            <p style={{ opacity: 0.5, textAlign: 'center' }}>O amigo não possui mais figurinhas repetidas no momento.</p>
+            <p style={{ opacity: 0.5, textAlign: 'center' }}>Nenhuma repetida disponível.</p>
           ) : (
             repDoAnfitriao.map(pais => (
-              <div key={pais.id} style={{ background: '#1f1f2e', padding: '16px', borderRadius: '12px', marginBottom: '12px', border: '1px solid #2e2e36' }}>
-                <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{pais.nome} ({pais.id})</span>
+              <div key={pais.id} style={{ background: '#1f1f2e', padding: '16px', borderRadius: '12px', marginBottom: '12px' }}>
+                <span style={{尊fontSize: '1.1rem', fontWeight: 'bold' }}>{pais.nome} ({pais.id})</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
                   {pais.itens.map(item => (
-                    <button key={item.num} onClick={() => sinalizarInteresse(idAnfitriao, dadosAnfitriao.nomeDono, pais.id, item.num)} style={{ background: '#1e1b4b', border: '1px solid #4338ca', color: '#fff', padding: '8px 14px', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                    <button key={item.num} onClick={() => sinalizarInteresse(idAnfitriao, dadosAnfitriao.nomeDono, pais.id, item.num)} style={{ background: '#1e1b4b', border: '1px solid #4338ca', color: '#fff', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer' }}>
                       Nº {item.num} ({item.qtd}x) 🤝 Pedir
                     </button>
                   ))}
@@ -370,7 +372,7 @@ export default function App() {
     );
   }
 
-  // --- TELA 1: LISTA TOTAL DAS SELEÇÕES DIRETA ---
+  // --- TELA 1: LISTA TOTAL DAS SELEÇÕES ---
   if (telaAtual === 'lista') {
     return (
       <div>
@@ -383,14 +385,14 @@ export default function App() {
 
         <div className="main-container" style={{ maxWidth: '1200px' }}>
           
-          {/* Alertas de Trocas Pendentes */}
+          {/* Alertas */}
           {notificacoes.length > 0 && (
             <div style={{ background: '#111827', border: '2px solid #10b981', borderRadius: '14px', padding: '16px', marginBottom: '24px' }}>
-              <h4 style={{ color: '#10b981', margin: '0 0 12px 0', fontWeight: 'bold' }}>📢 Solicitações de Troca Pendentes:</h4>
+              <h4 style={{ color: '#10b981', margin: '0 0 12px 0', fontWeight: 'bold' }}>📢 Solicitações Pendentes:</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {notificacoes.map((pedido) => (
                   <div key={pedido.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
-                    <span style={{ fontSize: '0.85rem' }}>👉 <b>{pedido.deNome}</b> quer a sua figurinha <b>{pedido.paisId} - Nº {pedido.numero}</b></span>
+                    <span style={{ fontSize: '0.85rem' }}>👉 <b>{pedido.deNome}</b> quer: <b>{pedido.paisId} - Nº {pedido.numero}</b></span>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button onClick={() => responderTroca(pedido.id, 'aceitar', pedido.paisId, pedido.numero)} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Aceitar</button>
                       <button onClick={() => responderTroca(pedido.id, 'recusar', pedido.paisId, pedido.numero)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Recusar</button>
@@ -423,7 +425,7 @@ export default function App() {
           </div>
 
           {/* LISTAGEM ÚNICA COM ROLAGEM */}
-          <h2 className="text-gray-400 font-bold text-xs tracking-wider mb-6 uppercase">Álbum Completo (Marque direto nas tabelas abaixo)</h2>
+          <h2 className="text-gray-400 font-bold text-xs tracking-wider mb-6 uppercase">Álbum Completo</h2>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             {listaPaises.map((pais) => {
@@ -431,22 +433,21 @@ export default function App() {
               return (
                 <div key={pais.id} style={{ background: '#1f1f2e', borderRadius: '16px', padding: '20px', border: '1px solid #2e2e36' }}>
                   
-                  {/* Cabeçalho da seleção */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <img src={`https://flagcdn.com/w40/${pais.code}.png`} style={{ width: '36px', borderRadius: '4px', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }} alt={pais.nome}/>
+                      <img src={`https://flagcdn.com/w40/${pais.code}.png`} style={{ width: '36px', borderRadius: '4px' }} alt={pais.nome}/>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <span style={{ fontSize: '1.3rem', fontWeight: '800', color: '#fff' }}>{pais.nome}</span>
-                        <span style={{ fontSize: '0.8rem', opacity: '0.5', fontWeight: '700', textTransform: 'uppercase', marginTop: '6px', letterSpacing: '1px' }}>ID do País: {pais.id}</span>
+                        <span style={{ fontSize: '0.8rem', opacity: '0.5', fontWeight: '700', textTransform: 'uppercase', marginTop: '6px' }}>ID: {pais.id}</span>
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <span style={{ background: tengo === 20 ? '#10b981' : '#2a2a3a', padding: '6px 12px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold' }}>{tenho} / 20</span>
-                      {repetidas > 0 && <span style={{ fontSize: '11px', color: '#3b82f6', display: 'block', marginTop: '6px', fontWeight: 'bold' }}>+{repetidas} repetidas</span>}
+                      {repetidas > 0 && <span style={{ fontSize: '11px', color: '#3b82f6', display: 'block', marginTop: '6px', fontWeight: 'bold' }}>+{repetidas} rep</span>}
                     </div>
                   </div>
 
-                  {/* Grid de Figurinhas de 1 a 20 */}
+                  {/* Grid de Figurinhas */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px' }}>
                     {vinteNumeros.map((num) => {
                       const marcado = meuAlbum[`${pais.id}-${num}`] === true;
@@ -455,14 +456,14 @@ export default function App() {
                         <div key={num} style={{ background: '#14141f', padding: '8px', borderRadius: '10px', border: marcado ? '2px solid #10b981' : '1px solid #2a2a3a', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                           <button 
                             onClick={() => clicarNoNumero(pais.id, num)} 
-                            style={{ width: '100%', background: marcado ? '#10b981' : 'transparent', color: '#fff', border: 'none', padding: '6px 0', cursor: 'pointer', borderRadius: '6px', fontWeight: 'bold', fontSize: '1rem' }}
+                            style={{ width: '100%', background: marcado ? '#10b981' : 'transparent', color: '#fff', border: 'none', padding: '6px 0', cursor: 'pointer', borderRadius: '6px', fontWeight: 'bold' }}
                           >
                             {num}
                           </button>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '6px' }}>
-                            <button onClick={() => alterarRepetida(pais.id, num, 'menos')} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem' }}>-</button>
+                            <button onClick={() => alterarRepetida(pais.id, num, 'menos')} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
                             <span style={{ fontSize: '0.75rem', color: qtdRepetida > 0 ? '#3b82f6' : '#888', fontWeight: 'bold' }}>{qtdRepetida}r</span>
-                            <button onClick={() => alterarRepetida(pais.id, num, 'mais')} style={{ color: '#10b981', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem' }}>+</button>
+                            <button onClick={() => alterarRepetida(pais.id, num, 'mais')} style={{ color: '#10b981', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
                           </div>
                         </div>
                       );
