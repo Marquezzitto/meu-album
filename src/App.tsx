@@ -140,7 +140,6 @@ export default function App() {
     buscarAnfitriao();
   }, [user, idAnfitriao]);
 
-  // Monitora se os pedidos que EU fiz foram aceitos por alguém para me alertar em tempo real
   useEffect(() => {
     if (!user) return;
     const qAvisos = query(
@@ -153,10 +152,8 @@ export default function App() {
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added" || change.type === "modified") {
           const dadosPedido = change.doc.data();
-          // Alerta o amigo que a figurinha entrou no álbum dele
           alert(`🎉 Sucesso! O pedido da figurinha ${dadosPedido.paisId} Nº ${dadosPedido.numero} foi aceito e ela já foi colada automaticamente no seu álbum!`);
           
-          // Limpa ou atualiza o status do aviso para não ficar repetindo o alert infinitamente
           const pedidoRef = doc(db, "pedidos_trocas", change.doc.id);
           updateDoc(pedidoRef, { status: "arquivado_sucesso" });
         }
@@ -243,6 +240,21 @@ export default function App() {
     }).filter(pais => pais.itens.length > 0);
   };
 
+  const obterRepetidasFiltradasParaMim = (albumAnfitriao) => {
+    return listaPaises.map(pais => {
+      const itensQueMeFaltam = [];
+      for (let num = 1; num <= 20; num++) {
+        const qtdRepetidaAmigo = Number(albumAnfitriao[`${pais.id}-${num}-rep`]) || 0;
+        const euJaTenhoColada = meuAlbum[`${pais.id}-${num}`] === true;
+        
+        if (qtdRepetidaAmigo > 0 && !euJaTenhoColada) {
+          itensQueMeFaltam.push({ num, qtd: qtdRepetidaAmigo });
+        }
+      }
+      return { ...pais, itens: itensQueMeFaltam };
+    }).filter(pais => pais.itens.length > 0);
+  };
+
   const salvarNoBancoCompleto = async (novoAlbum) => {
     if (!user) return;
     await setDoc(doc(db, "usuarios_figurinhas", user.uid), novoAlbum);
@@ -300,14 +312,14 @@ export default function App() {
         if (qtdAtual <= 0) {
           alert("Você não tem mais essa figurinha repetida no seu estoque!");
           await updateDoc(pedidoRef, { status: "recusado_sem_estoque" });
+          // Remove da lista local para não travar a tela
+          setNotificacoes(prev => prev.filter(p => p.id !== pedidoId));
           return;
         }
 
-        // 1. BAIXA NO SEU ESTOQUE (Tira de você)
         const meuAlbumAtualizado = { ...meuAlbum, [apiKey]: qtdAtual - 1 };
         await salvarNoBancoCompleto(meuAlbumAtualizado);
 
-        // 2. ADIÇÃO NO ÁLBUM DO AMIGO (Cola para ele)
         const amigoAlbumRef = doc(db, "usuarios_figurinhas", deUid);
         const amigoCompartilhadoRef = doc(db, "compartilhamentos_publicos", deUid);
         
@@ -323,11 +335,12 @@ export default function App() {
           atualizadoEm: new Date().toISOString()
         });
 
-        // 3. ATUALIZA O STATUS DO PEDIDO PARA DISPARAR O AVISO NO OUTRO APP
         await updateDoc(pedidoRef, { status: "aceito" });
+        setNotificacoes(prev => prev.filter(p => p.id !== pedidoId));
         alert(`✔ Troca processada! A figurinha ${paisId} Nº ${numero} foi retirada das suas repetidas e colada no álbum do seu amigo.`);
       } else {
         await updateDoc(pedidoRef, { status: "recusado" });
+        setNotificacoes(prev => prev.filter(p => p.id !== pedidoId));
         alert("Troca recusada.");
       }
     } catch(e) {
@@ -335,7 +348,7 @@ export default function App() {
     }
   };
 
-  const compartilharWhatsApp = () => {
+  const compartirWhatsApp = () => {
     const repetidas = obterDadosRepetidas();
     if (repetidas.length === 0) {
       alert("Nenhuma repetida encontrada.");
@@ -377,7 +390,7 @@ export default function App() {
 
   // --- TELA 5: TELA EXCLUSIVA DO LINK DE CONVITE ---
   if (telaAtual === 'visualizar_convite' && dadosAnfitriao) {
-    const repDoAnfitriao = obterDadosRepetidas(dadosAnfitriao.album);
+    const repFiltradasParaAmigo = obterRepetidasFiltradasParaMim(dadosAnfitriao.album);
     return (
       <div>
         <header>
@@ -392,16 +405,21 @@ export default function App() {
           <div style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid #8b5cf6', borderRadius: '16px', padding: '20px', marginBottom: '24px', textAlign: 'center' }}>
             <h2>👋 Olá, {user.displayName}!</h2>
             <p style={{ fontSize: '0.9rem', opacity: '0.8', marginTop: '4px' }}>
-              Você está vendo as repetidas de <b>{dadosAnfitriao.nomeDono}</b>.
+              Você está vendo o estoque de <b>{dadosAnfitriao.nomeDono}</b>.
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 'bold', marginTop: '6px' }}>
+              🔍 O app filtrou e está mostrando APENAS as repetidas dele que FALTAM no seu álbum!
             </p>
           </div>
 
-          <h3 className="text-gray-400 font-bold text-xs tracking-wider mb-4 uppercase">Repetidas de {dadosAnfitriao.nomeDono}:</h3>
+          <h3 className="text-gray-400 font-bold text-xs tracking-wider mb-4 uppercase">Figurinhas que você precisa:</h3>
           
-          {repDoAnfitriao.length === 0 ? (
-            <p style={{ opacity: 0.5, textAlign: 'center' }}>Nenhuma repetida disponível.</p>
+          {repFiltradasParaAmigo.length === 0 ? (
+            <p style={{ opacity: 0.5, textAlign: 'center', padding: '20px' }}>
+              😎 Boa! O {dadosAnfitriao.nomeDono} não tem nenhuma repetida que esteja faltando no seu álbum. Você já tem todas essas!
+            </p>
           ) : (
-            repDoAnfitriao.map(pais => (
+            repFiltradasParaAmigo.map(pais => (
               <div key={pais.id} style={{ background: '#1f1f2e', padding: '16px', borderRadius: '12px', marginBottom: '12px' }}>
                 <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{pais.nome} ({pais.id})</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
@@ -413,6 +431,56 @@ export default function App() {
                 </div>
               </div>
             ))
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // --- NOVA TELA 6: CENTRAL EXCLUSIVA SÓ PARA SOLICITAÇÕES PENDENTES DE TROCA ---
+  if (telaAtual === 'gerenciar_pedidos') {
+    return (
+      <div>
+        <header>
+          <div className="header-container">
+            <button onClick={() => setTelaAtual('lista')} className="btn-logout" style={{ borderColor: '#10b981', color: '#10b981' }}>
+              ← Voltar para Meu Álbum
+            </button>
+          </div>
+        </header>
+
+        <div className="main-container" style={{ maxWidth: '600px' }}>
+          <h2 style={{ color: '#10b981', marginBottom: '8px' }}>📩 Solicitações de Troca Pendentes</h2>
+          <p style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '24px' }}>
+            Abaixo estão os pedidos que os seus amigos fizeram usando o seu link de convite.
+          </p>
+
+          {notificacoes.length === 0 ? (
+            <div style={{ background: '#1f1f2e', borderRadius: '12px', padding: '32px', textAlign: 'center', border: '1px dashed #2e2e36' }}>
+              <p style={{ opacity: 0.5 }}>Nenhuma solicitação pendente no momento!</p>
+              <button onClick={() => setTelaAtual('lista')} className="btn btn-primary" style={{ background: '#3b82f6', marginTop: '16px', padding: '10px 20px', borderRadius: '8px', fontSize: '0.85rem' }}>Voltar para o Álbum</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {notificacoes.map((pedido) => (
+                <div key={pedido.id} style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#1f1f2e', padding: '16px', borderRadius: '14px', border: '1px solid #2e2e36' }}>
+                  <div style={{ fontSize: '0.95rem' }}>
+                    👤 Amigo: <b style={{ color: '#fff' }}>{pedido.deNome}</b>
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: '#a1a1aa' }}>
+                    Pediu a figurinha: <b style={{ color: '#3b82f6' }}>{pedido.paisId} — Nº {pedido.numero}</b>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                    <button onClick={() => responderTroca(pedido.id, 'aceitar', pedido.paisId, pedido.numero, pedido.deUid)} style={{ flex: 1, background: '#10b981', color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                      ✔ Aceitar e Colar no Álbum dele
+                    </button>
+                    <button onClick={() => responderTroca(pedido.id, 'recusar', pedido.paisId, pedido.numero, pedido.deUid)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                      Recusar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>
@@ -432,21 +500,21 @@ export default function App() {
 
         <div className="main-container" style={{ maxWidth: '1200px' }}>
           
-          {/* Alertas */}
+          {/* ATUALIZADO: Alerta Limpo e Discreto. Só aparece o card se houver pendências, e ao clicar abre a Tela 6 */}
           {notificacoes.length > 0 && (
-            <div style={{ background: '#111827', border: '2px solid #10b981', borderRadius: '14px', padding: '16px', marginBottom: '24px' }}>
-              <h4 style={{ color: '#10b981', margin: '0 0 12px 0', fontWeight: 'bold' }}>📢 Solicitações Pendentes:</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {notificacoes.map((pedido) => (
-                  <div key={pedido.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '8px' }}>
-                    <span style={{ fontSize: '0.85rem' }}>👉 <b>{pedido.deNome}</b> quer: <b>{pedido.paisId} - Nº {pedido.numero}</b></span>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => responderTroca(pedido.id, 'aceitar', pedido.paisId, pedido.numero, pedido.deUid)} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Aceitar</button>
-                      <button onClick={() => responderTroca(pedido.id, 'recusar', pedido.paisId, pedido.numero, pedido.deUid)} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Recusar</button>
-                    </div>
-                  </div>
-                ))}
+            <div 
+              onClick={() => setTelaAtual('gerenciar_pedidos')}
+              style={{ background: '#111827', border: '2px solid #10b981', borderRadius: '14px', padding: '16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '1.3rem' }}>📢</span>
+                <span style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#fff' }}>
+                  Você tem <span style={{ color: '#10b981', fontSize: '1.1rem' }}>{notificacoes.length}</span> {notificacoes.length === 1 ? 'nova solicitação' : 'novas solicitações'} de troca pendentes!
+                </span>
               </div>
+              <span style={{ color: '#10b981', fontWeight: 'bold', fontSize: '0.85rem', background: 'rgba(16, 185, 129, 0.1)', padding: '6px 12px', borderRadius: '8px' }}>
+                Ver Pedidos →
+              </span>
             </div>
           )}
 
@@ -489,7 +557,7 @@ export default function App() {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ background: tenho === 20 ? '#10b981' : '#2a2a3a', padding: '6px 12px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold' }}>{tenho} / 20</span>
+                      <span style={{ background: tengo === 20 ? '#10b981' : '#2a2a3a', padding: '6px 12px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold' }}>{tengo} / 20</span>
                       {repetidas > 0 && <span style={{ fontSize: '11px', color: '#3b82f6', display: 'block', marginTop: '6px', fontWeight: 'bold' }}>+{repetidas} rep</span>}
                     </div>
                   </div>
