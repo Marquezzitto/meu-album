@@ -45,7 +45,7 @@ const listaPaises = [
   { id: 'CUW', nome: 'Curaçao', code: 'cw' },
   { id: 'CIV', nome: 'Costa do Marfim', code: 'ci' },
   { id: 'ECU', nome: 'Equador', code: 'ec' },
-  { id: 'NED', ('Holanda'), nome: 'Holanda', code: 'nl' },
+  { id: 'NED', nome: 'Holanda', code: 'nl' }, // Corrigido aqui!
   { id: 'JPN', nome: 'Japão', code: 'jp' },
   { id: 'SWE', nome: 'Suécia', code: 'se' },
   { id: 'TUN', nome: 'Tunísia', code: 'tn' },
@@ -556,7 +556,6 @@ export default function App() {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      {/* CORRIGIDO: Linha que travava com 'tengo' agora usa 'tenho' */}
                       <span style={{ background: tenho === 20 ? '#10b981' : '#2a2a3a', padding: '6px 12px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold' }}>{tenho} / 20</span>
                       {repetidas > 0 && <span style={{ fontSize: '11px', color: '#3b82f6', display: 'block', marginTop: '6px', fontWeight: 'bold' }}>+{repetidas} rep</span>}
                     </div>
