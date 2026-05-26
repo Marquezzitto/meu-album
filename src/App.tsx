@@ -45,7 +45,7 @@ const listaPaises = [
   { id: 'CUW', nome: 'Curaçao', code: 'cw' },
   { id: 'CIV', nome: 'Costa do Marfim', code: 'ci' },
   { id: 'ECU', nome: 'Equador', code: 'ec' },
-  { id: 'NED', nome: 'Holanda', code: 'nl' },
+  { id: 'NED', ('Holanda'), nome: 'Holanda', code: 'nl' },
   { id: 'JPN', nome: 'Japão', code: 'jp' },
   { id: 'SWE', nome: 'Suécia', code: 'se' },
   { id: 'TUN', nome: 'Tunísia', code: 'tn' },
@@ -312,7 +312,6 @@ export default function App() {
         if (qtdAtual <= 0) {
           alert("Você não tem mais essa figurinha repetida no seu estoque!");
           await updateDoc(pedidoRef, { status: "recusado_sem_estoque" });
-          // Remove da lista local para não travar a tela
           setNotificacoes(prev => prev.filter(p => p.id !== pedidoId));
           return;
         }
@@ -437,7 +436,7 @@ export default function App() {
     );
   }
 
-  // --- NOVA TELA 6: CENTRAL EXCLUSIVA SÓ PARA SOLICITAÇÕES PENDENTES DE TROCA ---
+  // --- TELA 6: CENTRAL EXCLUSIVA SÓ PARA SOLICITAÇÕES PENDENTES DE TROCA ---
   if (telaAtual === 'gerenciar_pedidos') {
     return (
       <div>
@@ -500,7 +499,7 @@ export default function App() {
 
         <div className="main-container" style={{ maxWidth: '1200px' }}>
           
-          {/* ATUALIZADO: Alerta Limpo e Discreto. Só aparece o card se houver pendências, e ao clicar abre a Tela 6 */}
+          {/* Alerta Limpo e Discreto */}
           {notificacoes.length > 0 && (
             <div 
               onClick={() => setTelaAtual('gerenciar_pedidos')}
@@ -557,7 +556,8 @@ export default function App() {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ background: tengo === 20 ? '#10b981' : '#2a2a3a', padding: '6px 12px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold' }}>{tengo} / 20</span>
+                      {/* CORRIGIDO: Linha que travava com 'tengo' agora usa 'tenho' */}
+                      <span style={{ background: tenho === 20 ? '#10b981' : '#2a2a3a', padding: '6px 12px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold' }}>{tenho} / 20</span>
                       {repetidas > 0 && <span style={{ fontSize: '11px', color: '#3b82f6', display: 'block', marginTop: '6px', fontWeight: 'bold' }}>+{repetidas} rep</span>}
                     </div>
                   </div>
