@@ -40,6 +40,7 @@ const listaPaises = [
   { id: 'USA', nome: 'Estados Unidos', code: 'us' },
   { id: 'PAR', nome: 'Paraguai', code: 'py' },
   { id: 'AUS', nome: 'Austrália', code: 'au' },
+  { id: 'TUN', nome: 'Tunísia', code: 'tn' },
   { id: 'TUR', nome: 'Turquia', code: 'tr' },
   { id: 'GER', nome: 'Alemanha', code: 'de' },
   { id: 'CUW', nome: 'Curaçao', code: 'cw' },
@@ -68,11 +69,10 @@ const listaPaises = [
   { id: 'COD', nome: 'R. D. do Congo', code: 'cd' },
   { id: 'UZB', nome: 'Uzbequistão', code: 'uz' },
   { id: 'COL', nome: 'Colômbia', code: 'co' },
-  { id: 'TUN', nome: 'Tunísia', code: 'tn' },
   { id: 'ENG', nome: 'Inglaterra', code: 'gb-eng' },
-  { id: 'PAN', nome: 'Panamá', code: 'pa' },
   { id: 'CRO', nome: 'Croácia', code: 'hr' },
   { id: 'GHA', nome: 'Gana', code: 'gh' }
+  { id: 'PAN', nome: 'Panamá', code: 'pa' },
 ];
 
 const vinteNumeros = Array.from({ length: 20 }, (_, i) => i + 1);
