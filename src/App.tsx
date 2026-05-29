@@ -649,7 +649,7 @@ export default function App() {
 
           {/* LISTAGEM ÚNICA COM FILTRAGEM DINÂMICA EM TEMPO REAL */}
           <h2 className="text-gray-400 font-bold text-xs tracking-wider mb-6 uppercase">
-            Álbum Completo — exibindo: {filtroDashboard.toUpperCase()}
+            {/Álbum Completo — exibindo:/} {filtroDashboard.toUpperCase()}
           </h2>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
