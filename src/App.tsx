@@ -87,9 +87,18 @@ export default function App() {
   const [notificacoes, setNotificacoes] = useState([]);
   const [historicoTrocas, setHistoricoTrocas] = useState([]);
   const [filtroDashboard, setFiltroDashboard] = useState('todos'); // 'todos' | 'tenho' | 'faltam'
+  const [busca, setBusca] = useState(''); // Estado para guardar o texto digitado na busca
   
   const [idAnfitriao, setIdAnfitriao] = useState(null);
   const [dadosAnfitriao, setDadosAnfitriao] = useState(null);
+
+  // Função auxiliar para remover acentos e deixar em minúsculo
+  const normalizarTexto = (texto) => {
+    return texto
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -642,64 +651,93 @@ export default function App() {
             </button>
           </div>
 
+          {/* CAMPO DE BUSCA INTELIGENTE */}
+          <div style={{ marginBottom: '24px' }}>
+            <input 
+              type="text" 
+              placeholder="🔍 Buscar seleção por nome ou sigla (Ex: BRA, México...)" 
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '14px 20px',
+                borderRadius: '12px',
+                border: '1px solid #2e2e36',
+                background: '#1f1f2e',
+                color: '#fff',
+                fontSize: '1rem',
+                outline: 'none',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+              }}
+            />
+          </div>
+
           {/* LISTAGEM ÚNICA COM FILTRAGEM DINÂMICA EM TEMPO REAL */}
-          
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-            {listaPaises.map((pais) => {
-              const { tenho, repetidas } = contarFigurinhasDoPais(pais.id);
-              
-              const numerosFiltrados = vinteNumeros.filter(num => {
-                const jaPossui = meuAlbum[`${pais.id}-${num}`] === true;
-                if (filtroDashboard === 'tenho') return jaPossui;
-                if (filtroDashboard === 'faltam') return !jaPossui;
-                return true; 
-              });
+            {listaPaises
+              .filter((pais) => {
+                // Filtro da busca por Nome ou ID (Sigla) sem acento e sem maiúscula
+                const termoNormalizado = normalizarTexto(busca);
+                const nomeNormalizado = normalizarTexto(pais.nome);
+                const idNormalizado = normalizarTexto(pais.id);
+                
+                return nomeNormalizado.includes(termoNormalizado) || idNormalizado.includes(termoNormalizado);
+              })
+              .map((pais) => {
+                const { tenho, repetidas } = contarFigurinhasDoPais(pais.id);
+                
+                const numerosFiltrados = vinteNumeros.filter(num => {
+                  const jaPossui = meuAlbum[`${pais.id}-${num}`] === true;
+                  if (filtroDashboard === 'tenho') return jaPossui;
+                  if (filtroDashboard === 'faltam') return !jaPossui;
+                  return true; 
+                });
 
-              if (numerosFiltrados.length === 0) return null;
+                if (numerosFiltrados.length === 0) return null;
 
-              return (
-                <div key={pais.id} style={{ background: '#1f1f2e', borderRadius: '16px', padding: '20px', border: '1px solid #2e2e36' }}>
-                  
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <img src={`https://flagcdn.com/w40/${pais.code}.png`} style={{ width: '36px', borderRadius: '4px' }} alt={pais.nome}/>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '1.3rem', fontWeight: '800', color: '#fff' }}>{pais.nome}</span>
-                        <span style={{ fontSize: '0.8rem', opacity: '0.5', fontWeight: '700', textTransform: 'uppercase', marginTop: '6px' }}>ID: {pais.id}</span>
+                return (
+                  <div key={pais.id} style={{ background: '#1f1f2e', borderRadius: '16px', padding: '20px', border: '1px solid #2e2e36' }}>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <img src={`https://flagcdn.com/w40/${pais.code}.png`} style={{ width: '36px', borderRadius: '4px' }} alt={pais.nome}/>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '1.3rem', fontWeight: '800', color: '#fff' }}>{pais.nome}</span>
+                          <span style={{ fontSize: '0.8rem', opacity: '0.5', fontWeight: '700', textTransform: 'uppercase', marginTop: '6px' }}>ID: {pais.id}</span>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ background: tenho === 20 ? '#10b981' : '#2a2a3a', padding: '6px 12px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold' }}>{tenho} / 20</span>
+                        {repetidas > 0 && <span style={{ fontSize: '11px', color: '#3b82f6', display: 'block', marginTop: '6px', fontWeight: 'bold' }}>+{repetidas} rep</span>}
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ background: tenho === 20 ? '#10b981' : '#2a2a3a', padding: '6px 12px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold' }}>{tenho} / 20</span>
-                      {repetidas > 0 && <span style={{ fontSize: '11px', color: '#3b82f6', display: 'block', marginTop: '6px', fontWeight: 'bold' }}>+{repetidas} rep</span>}
-                    </div>
-                  </div>
 
-                  {/* Grid de Figurinhas */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px' }}>
-                    {numerosFiltrados.map((num) => {
-                      const marcado = meuAlbum[`${pais.id}-${num}`] === true;
-                      const qtdRepetida = Number(meuAlbum[`${pais.id}-${num}-rep`]) || 0;
-                      return (
-                        <div key={num} style={{ background: '#14141f', padding: '8px', borderRadius: '10px', border: marcado ? '2px solid #10b981' : '1px solid #2a2a3a', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <button 
-                            onClick={() => clicarNoNumero(pais.id, num)} 
-                            style={{ width: '100%', background: marcado ? '#10b981' : 'transparent', color: '#fff', border: 'none', padding: '6px 0', cursor: 'pointer', borderRadius: '6px', fontWeight: 'bold' }}
-                          >
-                            {num}
-                          </button>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '6px' }}>
-                            <button onClick={() => alterarRepetida(pais.id, num, 'menos')} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
-                            <span style={{ fontSize: '0.75rem', color: qtdRepetida > 0 ? '#3b82f6' : '#888', fontWeight: 'bold' }}>{qtdRepetida}r</span>
-                            <button onClick={() => alterarRepetida(pais.id, num, 'mais')} style={{ color: '#10b981', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                    {/* Grid de Figurinhas */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px' }}>
+                      {numerosFiltrados.map((num) => {
+                        const marcado = meuAlbum[`${pais.id}-${num}`] === true;
+                        const qtdRepetida = Number(meuAlbum[`${pais.id}-${num}-rep`]) || 0;
+                        return (
+                          <div key={num} style={{ background: '#14141f', padding: '8px', borderRadius: '10px', border: marcado ? '2px solid #10b981' : '1px solid #2a2a3a', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <button 
+                              onClick={() => clicarNoNumero(pais.id, num)} 
+                              style={{ width: '100%', background: marcado ? '#10b981' : 'transparent', color: '#fff', border: 'none', padding: '6px 0', cursor: 'pointer', borderRadius: '6px', fontWeight: 'bold' }}
+                            >
+                              {num}
+                            </button>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '6px' }}>
+                              <button onClick={() => alterarRepetida(pais.id, num, 'menos')} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}>-</button>
+                              <span style={{ fontSize: '0.75rem', color: qtdRepetida > 0 ? '#3b82f6' : '#888', fontWeight: 'bold' }}>{qtdRepetida}r</span>
+                              <button onClick={() => alterarRepetida(pais.id, num, 'mais')} style={{ color: '#10b981', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}>+</button>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
 
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })}
           </div>
         </div>
       </div>
