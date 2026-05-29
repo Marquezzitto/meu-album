@@ -69,12 +69,11 @@ const listaPaises = [
   { id: 'COD', nome: 'R. D. do Congo', code: 'cd' },
   { id: 'UZB', nome: 'Uzbequistão', code: 'uz' },
   { id: 'COL', nome: 'Colômbia', code: 'co' },
-  { id: 'ENG', font: 'Inglaterra', nome: 'Inglaterra', code: 'gb-eng' },
+  { id: 'ENG', nome: 'Inglaterra', code: 'gb-eng' },
   { id: 'CRO', nome: 'Croácia', code: 'hr' },
   { id: 'GHA', nome: 'Gana', code: 'gh' },
   { id: 'PAN', nome: 'Panamá', code: 'pa' }
 ];
-
 const vinteNumeros = Array.from({ length: 20 }, (_, i) => i + 1);
 
 // ==========================================
@@ -169,7 +168,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     
-    // Escuta requisições pendentes voltadas a você
+    // Escuta requisições pendentes
     const qPendentes = query(
       collection(db, "pedidos_trocas"), 
       where("paraUid", "==", user.uid),
@@ -184,7 +183,7 @@ export default function App() {
       setNotificacoes(listaPedidos);
     });
 
-    // Escuta histórico duplo direto do banco (Ações concluídas por você ou enviadas a você)
+    // Escuta histórico duplo direto do banco (Ações concluídas)
     const qHistorico = query(
       collection(db, "pedidos_trocas"),
       where("paraUid", "==", user.uid),
@@ -459,14 +458,18 @@ export default function App() {
     );
   }
 
-  // --- TELA 6: CENTRAL EXCLUSIVA SÓ PARA SOLICITAÇÕES PENDENTES E HISTÓRICO ---
+  // --- TELA 6: CENTRAL DE SOLICITAÇÕES PENDENTES DE TROCA COM BOTÃO DE HISTÓRICO FIXO ---
   if (telaAtual === 'gerenciar_pedidos') {
     return (
       <div>
         <header>
-          <div className="header-container">
+          <div className="header-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <button onClick={() => setTelaAtual('lista')} className="btn-logout" style={{ borderColor: '#10b981', color: '#10b981' }}>
               ← Voltar para Meu Álbum
+            </button>
+            {/* BOTÃO DE HISTÓRICO VISÍVEL E EM DESTAQUE NA TELA DE TROCAS */}
+            <button onClick={() => setTelaAtual('historico')} className="btn" style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}>
+              📜 Ver Histórico Completo
             </button>
           </div>
         </header>
@@ -474,7 +477,7 @@ export default function App() {
         <div className="main-container" style={{ maxWidth: '600px' }}>
           <h2 style={{ color: '#10b981', marginBottom: '8px' }}>📩 Solicitações de Troca Pendentes</h2>
           <p style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '24px' }}>
-            Abaixo estão os pedidos que os seus amigos fizeram usando o seu link de convite.
+            Abaixo estão os pedidos ativos feitos pelos seus amigos.
           </p>
 
           {notificacoes.length === 0 ? (
@@ -504,13 +507,13 @@ export default function App() {
             </div>
           )}
 
-          {/* Seção de Histórico Duplo (Aceitos e Recusados) */}
-          <h3 style={{ color: '#a1a1aa', marginBottom: '12px', fontSize: '1.1rem' }}>📜 Histórico de Transações</h3>
+          {/* Renderização direta do histórico também no rodapé da página de solicitações */}
+          <h3 style={{ color: '#a1a1aa', marginBottom: '12px', fontSize: '1.1rem' }}>📜 Transações Recentes</h3>
           {historicoTrocas.length === 0 ? (
             <p style={{ opacity: 0.4, fontSize: '0.85rem' }}>Nenhuma transação concluída recentemente.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {historicoTrocas.map((hist) => {
+              {historicoTrocas.slice(0, 5).map((hist) => {
                 const foiAceito = hist.status === 'aceito' || hist.status === 'arquivado_sucesso';
                 return (
                   <div key={hist.id} style={{ background: '#14141f', padding: '12px 16px', borderRadius: '10px', border: `1px solid ${foiAceito ? '#10b98133' : '#ef444433'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -531,7 +534,54 @@ export default function App() {
     );
   }
 
-  // --- TELA 1: LISTA TOTAL DAS SELEÇÕES ---
+  // --- TELA 7: TELA EXCLUSIVA DO HISTÓRICO DE TROCAS ---
+  if (telaAtual === 'historico') {
+    return (
+      <div>
+        <header>
+          <div className="header-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button onClick={() => setTelaAtual('lista')} className="btn-logout" style={{ borderColor: '#f59e0b', color: '#f59e0b' }}>
+              ← Voltar para Meu Álbum
+            </button>
+            <button onClick={() => setTelaAtual('gerenciar_pedidos')} className="btn" style={{ background: '#10b981', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}>
+              📩 Ver Pedidos Pendentes
+            </button>
+          </div>
+        </header>
+        <div className="main-container" style={{ maxWidth: '600px' }}>
+          <h2 style={{ color: '#f59e0b', marginBottom: '8px' }}>📜 Histórico Geral de Transações</h2>
+          <p style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '24px' }}>
+            Registro completo de todas as requisições resolvidas e processadas por você.
+          </p>
+
+          {historicoTrocas.length === 0 ? (
+            <div style={{ background: '#1f1f2e', borderRadius: '12px', padding: '32px', textAlign: 'center', border: '1px dashed #2e2e36' }}>
+              <p style={{ opacity: 0.4 }}>Nenhuma transação registrada no histórico.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {historicoTrocas.map((hist) => {
+                const foiAceito = hist.status === 'aceito' || hist.status === 'arquivado_sucesso';
+                return (
+                  <div key={hist.id} style={{ background: '#14141f', padding: '14px 18px', borderRadius: '12px', border: `1px solid ${foiAceito ? '#10b98133' : '#ef444433'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '0.9rem', color: '#fff', display: 'block' }}>Solicitante: <b>{hist.deNome}</b></span>
+                      <small style={{ color: '#a1a1aa', fontSize: '0.8rem' }}>Item: {hist.paisId} — Nº {hist.numero}</small>
+                    </div>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: foiAceito ? '#10b981' : '#ef4444', background: foiAceito ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', padding: '5px 10px', borderRadius: '6px' }}>
+                      {foiAceito ? 'CONCLUÍDO' : hist.status === 'recusado_sem_estoque' ? 'ESTOQUE ESGOTADO' : 'RECUSADO'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // --- TELA 1: LISTA TOTAL DAS SELEÇÕES (TELA INICIAL) ---
   if (telaAtual === 'lista') {
     return (
       <div>
@@ -544,7 +594,7 @@ export default function App() {
 
         <div className="main-container" style={{ maxWidth: '1200px' }}>
           
-          {/* Alerta Limpo e Discreto */}
+          {/* Alerta de Notificação Ativa */}
           {notificacoes.length > 0 && (
             <div 
               onClick={() => setTelaAtual('gerenciar_pedidos')}
@@ -567,7 +617,6 @@ export default function App() {
             <h2> Seu Progresso ({porcentagemProgresso}%)</h2>
             <div className="progress-bar-container"><div className="progress-bar-fill" style={{ width: `${porcentagemProgresso}%` }}></div></div>
             
-            {/* Filtros Ativos integrados nas métricas */}
             <div className="cards-stats" style={{ cursor: 'pointer' }}>
               <div onClick={() => setFiltroDashboard('todos')} className={`stat-card total ${filtroDashboard === 'todos' ? 'active-filter' : ''}`} style={{ border: filtroDashboard === 'todos' ? '2px solid #fff' : '2px solid transparent', padding: '8px', borderRadius: '10px' }}>
                 <div className="label">Total (Ver Todas)</div>
@@ -584,13 +633,17 @@ export default function App() {
             </div>
           </div>
 
-          {/* Menu de Controle */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '32px' }}>
-            <button onClick={() => setTelaAtual('repetidas')} className="btn btn-primary" style={{ background: '#3b82f6', padding: '14px', borderRadius: '12px', fontWeight: '700' }}>
+          {/* MENU DE CONTROLE PRINCIPAL COM BOTÃO DE HISTÓRICO TOTALMENTE VISÍVEL */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '32px' }}>
+            <button onClick={() => setTelaAtual('repetidas')} className="btn btn-primary" style={{ background: '#3b82f6', padding: '14px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>
               🔄 Minhas Repetidas ({totalRepetidasGeral})
             </button>
-            <button onClick={carregarAlbunsDoApp} className="btn btn-primary" style={{ background: '#8b5cf6', padding: '14px', borderRadius: '12px', fontWeight: '700' }}>
+            <button onClick={carregarAlbunsDoApp} className="btn btn-primary" style={{ background: '#8b5cf6', padding: '14px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>
               👥 Ver Trocas do App
+            </button>
+            {/* O BOTÃO DO HISTÓRICO NA TELA INICIAL */}
+            <button onClick={() => setTelaAtual('historico')} className="btn btn-primary" style={{ background: '#f59e0b', padding: '14px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>
+              📜 Histórico de Trocas ({historicoTrocas.length})
             </button>
           </div>
 
@@ -603,15 +656,13 @@ export default function App() {
             {listaPaises.map((pais) => {
               const { tenho, repetidas } = contarFigurinhasDoPais(pais.id);
               
-              // Filtra o array de números de forma reativa sem quebrar as referências das ações
               const numerosFiltrados = vinteNumeros.filter(num => {
                 const jaPossui = meuAlbum[`${pais.id}-${num}`] === true;
                 if (filtroDashboard === 'tenho') return jaPossui;
                 if (filtroDashboard === 'faltam') return !jaPossui;
-                return true; // 'todos'
+                return true; 
               });
 
-              // Oculta o país inteiro na visualização se nenhum número corresponder ao filtro ativo
               if (numerosFiltrados.length === 0) return null;
 
               return (
@@ -667,7 +718,13 @@ export default function App() {
   if (telaAtual === 'repetidas') {
     return (
       <div>
-        <header><div className="header-container"><button onClick={() => setTelaAtual('lista')} className="btn-logout">Voltar para o Álbum</button></div></header>
+        <header>
+          <div className="header-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button onClick={() => setTelaAtual('lista')} className="btn-logout">Voltar para o Álbum</button>
+            {/* BOTÃO DE HISTÓRICO DISPONÍVEL NA TELA DE REPETIDAS */}
+            <button onClick={() => setTelaAtual('historico')} className="btn-logout" style={{ borderColor: '#f59e0b', color: '#f59e0b' }}>📜 Ver Histórico</button>
+          </div>
+        </header>
         <div className="main-container" style={{ maxWidth: '500px' }}>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
@@ -700,7 +757,13 @@ export default function App() {
   if (telaAtual === 'comunidade') {
     return (
       <div>
-        <header><div className="header-container"><button onClick={() => setTelaAtual('lista')} className="btn-logout">Voltar para o Álbum</button></div></header>
+        <header>
+          <div className="header-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <button onClick={() => setTelaAtual('lista')} className="btn-logout">Voltar para o Álbum</button>
+            {/* BOTÃO DE HISTÓRICO DISPONÍVEL NA TELA DE COMUNIDADE */}
+            <button onClick={() => setTelaAtual('historico')} className="btn-logout" style={{ borderColor: '#f59e0b', color: '#f59e0b' }}>📜 Ver Histórico</button>
+          </div>
+        </header>
         <div className="main-container" style={{ maxWidth: '600px' }}>
           <h2>👥 Painel de Trocas da Comunidade</h2>
           <p style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '20px' }}>
