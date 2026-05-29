@@ -69,7 +69,7 @@ const listaPaises = [
   { id: 'COD', nome: 'R. D. do Congo', code: 'cd' },
   { id: 'UZB', nome: 'Uzbequistão', code: 'uz' },
   { id: 'COL', nome: 'Colômbia', code: 'co' },
-  { id: 'ENG', nome: 'Inglaterra', code: 'gb-eng' },
+  { id: 'ENG', font: 'Inglaterra', nome: 'Inglaterra', code: 'gb-eng' },
   { id: 'CRO', nome: 'Croácia', code: 'hr' },
   { id: 'GHA', nome: 'Gana', code: 'gh' },
   { id: 'PAN', nome: 'Panamá', code: 'pa' }
@@ -86,6 +86,8 @@ export default function App() {
   const [meuAlbum, setMeuAlbum] = useState({});
   const [albunsAlheios, setAlbunsAlheios] = useState([]);
   const [notificacoes, setNotificacoes] = useState([]);
+  const [historicoTrocas, setHistoricoTrocas] = useState([]);
+  const [filtroDashboard, setFiltroDashboard] = useState('todos'); // 'todos' | 'tenho' | 'faltam'
   
   const [idAnfitriao, setIdAnfitriao] = useState(null);
   const [dadosAnfitriao, setDadosAnfitriao] = useState(null);
@@ -107,6 +109,7 @@ export default function App() {
         setMeuAlbum({});
         setAlbunsAlheios([]);
         setNotificacoes([]);
+        setHistoricoTrocas([]);
         setDadosAnfitriao(null);
       }
     });
@@ -165,21 +168,41 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-    const q = query(
+    
+    // Escuta requisições pendentes voltadas a você
+    const qPendentes = query(
       collection(db, "pedidos_trocas"), 
       where("paraUid", "==", user.uid),
       where("status", "==", "pendente")
     );
     
-    const escutarPedidos = onSnapshot(q, (snapshot) => {
+    const escutarPedidos = onSnapshot(qPendentes, (snapshot) => {
       const listaPedidos = [];
       snapshot.forEach((doc) => {
         listaPedidos.push({ id: doc.id, ...doc.data() });
       });
       setNotificacoes(listaPedidos);
     });
+
+    // Escuta histórico duplo direto do banco (Ações concluídas por você ou enviadas a você)
+    const qHistorico = query(
+      collection(db, "pedidos_trocas"),
+      where("paraUid", "==", user.uid),
+      where("status", "in", ["aceito", "recusado", "arquivado_sucesso", "recusado_sem_estoque"])
+    );
+
+    const escutarHistorico = onSnapshot(qHistorico, (snapshot) => {
+      const listaHistorico = [];
+      snapshot.forEach((doc) => {
+        listaHistorico.push({ id: doc.id, ...doc.data() });
+      });
+      setHistoricoTrocas(listaHistorico);
+    });
     
-    return () => escutarPedidos();
+    return () => {
+      escutarPedidos();
+      escutarHistorico();
+    };
   }, [user]);
 
   const carregarAlbunsDoApp = async () => {
@@ -240,7 +263,6 @@ export default function App() {
     }).filter(pais => pais.itens.length > 0);
   };
 
-  // Função central de cruzamento de dados inteligente
   const obterRepetidasFiltradasParaMim = (albumAnfitriao) => {
     return listaPaises.map(pais => {
       const itensQueMeFaltam = [];
@@ -349,7 +371,7 @@ export default function App() {
   };
 
   const compartirWhatsApp = () => {
-    const repetidas = obterDadosRepetidas();
+    const repetidas = obtenerDadosRepetidas();
     if (repetidas.length === 0) {
       alert("Nenhuma repetida encontrada.");
       return;
@@ -437,7 +459,7 @@ export default function App() {
     );
   }
 
-  // --- TELA 6: CENTRAL EXCLUSIVA SÓ PARA SOLICITAÇÕES PENDENTES DE TROCA ---
+  // --- TELA 6: CENTRAL EXCLUSIVA SÓ PARA SOLICITAÇÕES PENDENTES E HISTÓRICO ---
   if (telaAtual === 'gerenciar_pedidos') {
     return (
       <div>
@@ -456,12 +478,11 @@ export default function App() {
           </p>
 
           {notificacoes.length === 0 ? (
-            <div style={{ background: '#1f1f2e', borderRadius: '12px', padding: '32px', textAlign: 'center', border: '1px dashed #2e2e36' }}>
+            <div style={{ background: '#1f1f2e', borderRadius: '12px', padding: '24px', textAlign: 'center', border: '1px dashed #2e2e36', marginBottom: '32px' }}>
               <p style={{ opacity: 0.5 }}>Nenhuma solicitação pendente no momento!</p>
-              <button onClick={() => setTelaAtual('lista')} className="btn btn-primary" style={{ background: '#3b82f6', marginTop: '16px', padding: '10px 20px', borderRadius: '8px', fontSize: '0.85rem' }}>Voltar para o Álbum</button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '32px' }}>
               {notificacoes.map((pedido) => (
                 <div key={pedido.id} style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#1f1f2e', padding: '16px', borderRadius: '14px', border: '1px solid #2e2e36' }}>
                   <div style={{ fontSize: '0.95rem' }}>
@@ -480,6 +501,29 @@ export default function App() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Seção de Histórico Duplo (Aceitos e Recusados) */}
+          <h3 style={{ color: '#a1a1aa', marginBottom: '12px', fontSize: '1.1rem' }}>📜 Histórico de Transações</h3>
+          {historicoTrocas.length === 0 ? (
+            <p style={{ opacity: 0.4, fontSize: '0.85rem' }}>Nenhuma transação concluída recentemente.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {historicoTrocas.map((hist) => {
+                const foiAceito = hist.status === 'aceito' || hist.status === 'arquivado_sucesso';
+                return (
+                  <div key={hist.id} style={{ background: '#14141f', padding: '12px 16px', borderRadius: '10px', border: `1px solid ${foiAceito ? '#10b98133' : '#ef444433'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '0.85rem', color: '#fff', display: 'block' }}>Para: <b>{hist.deNome}</b></span>
+                      <small style={{ color: '#a1a1aa' }}>{hist.paisId} - Nº {hist.numero}</small>
+                    </div>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: foiAceito ? '#10b981' : '#ef4444', background: foiAceito ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', padding: '4px 8px', borderRadius: '6px' }}>
+                      {foiAceito ? 'ACEITO' : hist.status === 'recusado_sem_estoque' ? 'SEM ESTOQUE' : 'RECUSADO'}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -522,10 +566,21 @@ export default function App() {
           <div className="dashboard-progresso">
             <h2> Seu Progresso ({porcentagemProgresso}%)</h2>
             <div className="progress-bar-container"><div className="progress-bar-fill" style={{ width: `${porcentagemProgresso}%` }}></div></div>
-            <div className="cards-stats">
-              <div className="stat-card total"><div className="label">Total</div><div className="value">{totalFigurinhasNoAlbum}</div></div>
-              <div className="stat-card tenho"><div className="label">Tenho</div><div className="value">{quantasEuTenhoGeral}</div></div>
-              <div className="stat-card faltam"><div className="label">Faltam</div><div className="value">{quantasFaltamGeral}</div></div>
+            
+            {/* Filtros Ativos integrados nas métricas */}
+            <div className="cards-stats" style={{ cursor: 'pointer' }}>
+              <div onClick={() => setFiltroDashboard('todos')} className={`stat-card total ${filtroDashboard === 'todos' ? 'active-filter' : ''}`} style={{ border: filtroDashboard === 'todos' ? '2px solid #fff' : '2px solid transparent', padding: '8px', borderRadius: '10px' }}>
+                <div className="label">Total (Ver Todas)</div>
+                <div className="value">{totalFigurinhasNoAlbum}</div>
+              </div>
+              <div onClick={() => setFiltroDashboard('tenho')} className={`stat-card tenho ${filtroDashboard === 'tenho' ? 'active-filter' : ''}`} style={{ border: filtroDashboard === 'tenho' ? '2px solid #10b981' : '2px solid transparent', padding: '8px', borderRadius: '10px' }}>
+                <div className="label">Já Tenho</div>
+                <div className="value">{quantasEuTenhoGeral}</div>
+              </div>
+              <div onClick={() => setFiltroDashboard('faltam')} className={`stat-card faltam ${filtroDashboard === 'faltam' ? 'active-filter' : ''}`} style={{ border: filtroDashboard === 'faltam' ? '2px solid #ef4444' : '2px solid transparent', padding: '8px', borderRadius: '10px' }}>
+                <div className="label">Faltam Coletar</div>
+                <div className="value">{quantasFaltamGeral}</div>
+              </div>
             </div>
           </div>
 
@@ -539,12 +594,26 @@ export default function App() {
             </button>
           </div>
 
-          {/* LISTAGEM ÚNICA COM ROLAGEM */}
-          <h2 className="text-gray-400 font-bold text-xs tracking-wider mb-6 uppercase">Álbum Completo</h2>
+          {/* LISTAGEM ÚNICA COM FILTRAGEM DINÂMICA EM TEMPO REAL */}
+          <h2 className="text-gray-400 font-bold text-xs tracking-wider mb-6 uppercase">
+            Álbum Completo — exibindo: {filtroDashboard.toUpperCase()}
+          </h2>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             {listaPaises.map((pais) => {
               const { tenho, repetidas } = contarFigurinhasDoPais(pais.id);
+              
+              // Filtra o array de números de forma reativa sem quebrar as referências das ações
+              const numerosFiltrados = vinteNumeros.filter(num => {
+                const jaPossui = meuAlbum[`${pais.id}-${num}`] === true;
+                if (filtroDashboard === 'tenho') return jaPossui;
+                if (filtroDashboard === 'faltam') return !jaPossui;
+                return true; // 'todos'
+              });
+
+              // Oculta o país inteiro na visualização se nenhum número corresponder ao filtro ativo
+              if (numerosFiltrados.length === 0) return null;
+
               return (
                 <div key={pais.id} style={{ background: '#1f1f2e', borderRadius: '16px', padding: '20px', border: '1px solid #2e2e36' }}>
                   
@@ -564,7 +633,7 @@ export default function App() {
 
                   {/* Grid de Figurinhas */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px' }}>
-                    {vinteNumeros.map((num) => {
+                    {numerosFiltrados.map((num) => {
                       const marcado = meuAlbum[`${pais.id}-${num}`] === true;
                       const qtdRepetida = Number(meuAlbum[`${pais.id}-${num}-rep`]) || 0;
                       return (
@@ -610,7 +679,7 @@ export default function App() {
             </button>
           </div>
 
-          {obterDadosRepetidas().map(pais => (
+          {obtenerDadosRepetidas(meuAlbum).map(pais => (
             <div key={pais.id} style={{ background: '#1f1f2e', padding: '16px', borderRadius: '12px', marginBottom: '12px' }}>
               <h4>{pais.nome}</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
@@ -644,10 +713,8 @@ export default function App() {
             (() => {
               let temAlgumResultado = false;
               const conteudoFiltrado = albunsAlheios.map((amigo) => {
-                // ATUALIZADO: Filtra as repetidas do amigo baseando-se no que EU preciso
                 const repFiltradasParaMim = obterRepetidasFiltradasParaMim(amigo.album);
                 
-                // Se ele não tiver nenhuma que me sirva, pula o card dele inteiro
                 if (repFiltradasParaMim.length === 0) return null;
                 
                 temAlgumResultado = true;
