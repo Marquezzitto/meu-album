@@ -199,7 +199,7 @@ export default function App() {
     });
     
     return () => {
-      escutarPedidos();
+      escurarPedidos();
       escutarHistorico();
     };
   }, [user]);
@@ -432,8 +432,6 @@ export default function App() {
               🔍 O app filtrou e está mostrando APENAS as repetidas dele que FALTAM no seu álbum!
             </p>
           </div>
-
-          <h3 className="text-gray-400 font-bold text-xs tracking-wider mb-4 uppercase">Figurinhas que você precisa:</h3>
           
           {repFiltradasParaAmigo.length === 0 ? (
             <p style={{ opacity: 0.5, textAlign: 'center', padding: '20px' }}>
@@ -467,7 +465,6 @@ export default function App() {
             <button onClick={() => setTelaAtual('lista')} className="btn-logout" style={{ borderColor: '#10b981', color: '#10b981' }}>
               ← Voltar para Meu Álbum
             </button>
-            {/* BOTÃO DE HISTÓRICO VISÍVEL E EM DESTAQUE NA TELA DE TROCAS */}
             <button onClick={() => setTelaAtual('historico')} className="btn" style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}>
               📜 Ver Histórico Completo
             </button>
@@ -507,7 +504,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Renderização direta do histórico também no rodapé da página de solicitações */}
           <h3 style={{ color: '#a1a1aa', marginBottom: '12px', fontSize: '1.1rem' }}>📜 Transações Recentes</h3>
           {historicoTrocas.length === 0 ? (
             <p style={{ opacity: 0.4, fontSize: '0.85rem' }}>Nenhuma transação concluída recentemente.</p>
@@ -641,16 +637,12 @@ export default function App() {
             <button onClick={carregarAlbunsDoApp} className="btn btn-primary" style={{ background: '#8b5cf6', padding: '14px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>
               👥 Ver Trocas do App
             </button>
-            {/* O BOTÃO DO HISTÓRICO NA TELA INICIAL */}
             <button onClick={() => setTelaAtual('historico')} className="btn btn-primary" style={{ background: '#f59e0b', padding: '14px', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' }}>
               📜 Histórico de Trocas ({historicoTrocas.length})
             </button>
           </div>
 
           {/* LISTAGEM ÚNICA COM FILTRAGEM DINÂMICA EM TEMPO REAL */}
-          <h2 className="text-gray-400 font-bold text-xs tracking-wider mb-6 uppercase">
-            {/Álbum Completo — exibindo:/} {filtroDashboard.toUpperCase()}
-          </h2>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             {listaPaises.map((pais) => {
@@ -721,7 +713,6 @@ export default function App() {
         <header>
           <div className="header-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <button onClick={() => setTelaAtual('lista')} className="btn-logout">Voltar para o Álbum</button>
-            {/* BOTÃO DE HISTÓRICO DISPONÍVEL NA TELA DE REPETIDAS */}
             <button onClick={() => setTelaAtual('historico')} className="btn-logout" style={{ borderColor: '#f59e0b', color: '#f59e0b' }}>📜 Ver Histórico</button>
           </div>
         </header>
@@ -760,15 +751,10 @@ export default function App() {
         <header>
           <div className="header-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <button onClick={() => setTelaAtual('lista')} className="btn-logout">Voltar para o Álbum</button>
-            {/* BOTÃO DE HISTÓRICO DISPONÍVEL NA TELA DE COMUNIDADE */}
             <button onClick={() => setTelaAtual('historico')} className="btn-logout" style={{ borderColor: '#f59e0b', color: '#f59e0b' }}>📜 Ver Histórico</button>
           </div>
         </header>
         <div className="main-container" style={{ maxWidth: '600px' }}>
-          <h2>👥 Painel de Trocas da Comunidade</h2>
-          <p style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '20px' }}>
-            Abaixo aparecem apenas os amigos que têm as repetidas que <b>faltam no seu álbum</b>.
-          </p>
           
           {albunsAlheios.length === 0 ? (
             <p style={{ opacity: 0.5, textAlign: 'center' }}>Nenhum outro amigo compartilhou figurinhas ainda.</p>
